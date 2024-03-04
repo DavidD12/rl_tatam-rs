@@ -1,0 +1,412 @@
+enum SkillsetState = { Free, Lock }
+enum SkillState = { Idle, Running, Interrupting, InvariantFailure, Success, Failure, Interrupted}
+// ==================== Resouces ====================
+
+enum First_Battery = { First_Normal, First_Low, First_Critical }
+var first_battery: First_Battery
+
+enum First_Motion = { First_On, First_Off }
+var first_motion: First_Motion
+
+init init_first_resources {
+  first_battery = First_Normal and first_motion = First_Off
+}
+
+// ==================== Events ====================
+
+trans first_from_normal_to_low {
+	first_state = Free and (first_battery = First_Normal) and 
+	|first_state, first_battery|(
+		first_state' = Lock
+		and first_battery' = First_Low
+	)
+}
+// ==================== Skillset ====================
+var first_state: SkillsetState
+
+init init_first {
+	first_state = Free
+}
+
+trans first_invariants_propagation {
+	first_state = Lock and
+	if first_goto_state = Running and not (first_motion = First_On) then
+		|first_goto_state|(
+			first_goto_state' = InvariantFailure
+		)
+	elif first_goto_state = Running and not (first_battery != First_Critical) then
+		|first_goto_state, first_motion|(
+			first_goto_state' = InvariantFailure
+			and first_motion' = First_Off
+		)
+	elif first_retoho_state = Running and not (first_motion = First_On) then
+		|first_retoho_state|(
+			first_retoho_state' = InvariantFailure
+		)
+	elif first_recharge_state = Running and not (first_motion = First_Off) then
+		|first_recharge_state|(
+			first_recharge_state' = InvariantFailure
+		)
+	else
+		|first_state, first_goto_state, first_retoho_state, first_recharge_state|(
+			if first_goto_state = InvariantFailure or first_goto_state = Success or first_goto_state = Failure or first_goto_state = Interrupted then
+				first_goto_state' = Idle
+			else
+				first_goto_state' = first_goto_state
+			end and
+			if first_retoho_state = InvariantFailure or first_retoho_state = Success or first_retoho_state = Failure or first_retoho_state = Interrupted then
+				first_retoho_state' = Idle
+			else
+				first_retoho_state' = first_retoho_state
+			end and
+			if first_recharge_state = InvariantFailure or first_recharge_state = Success or first_recharge_state = Failure or first_recharge_state = Interrupted then
+				first_recharge_state' = Idle
+			else
+				first_recharge_state' = first_recharge_state
+			end and
+			first_state' = Free
+		)
+	end
+}
+
+// ==================== Skill ====================
+
+// -------------------- Skill goto --------------------
+
+var first_goto_state: SkillState
+
+init first_goto {
+	first_goto_state = Idle
+}
+trans first_goto_idle_to_running {
+	first_state = Free and first_goto_state = Idle
+	and (first_battery = First_Normal)
+	and (first_motion = First_Off)
+	and |first_state, first_goto_state, first_motion|(
+		first_state' = Lock and first_goto_state' = Running
+		and first_motion' = First_On
+	)
+}
+trans first_goto_running_to_success_arrived {
+	first_state = Free and first_goto_state = Running
+	and |first_state, first_goto_state, first_motion, first_battery|(
+		first_state' = Lock and first_goto_state' = Success
+		and first_motion' = First_Off
+		and first_battery' = First_Low
+	)
+}
+trans first_goto_running_to_success_arrived_2 {
+	first_state = Free and first_goto_state = Running
+	and |first_state, first_goto_state, first_motion, first_battery|(
+		first_state' = Lock and first_goto_state' = Success
+		and first_motion' = First_Off
+		and first_battery' = First_Critical
+	)
+}
+trans first_goto_running_to_failure_blocked {
+	first_state = Free and first_goto_state = Running
+	and |first_state, first_goto_state, first_motion, first_battery|(
+		first_state' = Lock and first_goto_state' = Failure
+		and first_motion' = First_Off
+		and first_battery' = First_Low
+	)
+}
+trans first_goto_running_to_interrupting {
+	first_state = Free and first_goto_state = Running
+	and |first_goto_state|(first_goto_state' = Interrupting)
+}
+trans first_goto_interrupting_to_interrupted {
+	first_state = Free and first_goto_state = Interrupting
+	and |first_state, first_goto_state, first_motion, first_battery|(
+		first_state' = Lock and first_goto_state' = Interrupted
+		and first_motion' = First_Off
+		and first_battery' = First_Low
+	)
+}
+
+// -------------------- Skill retoho --------------------
+
+var first_retoho_state: SkillState
+
+init first_retoho {
+	first_retoho_state = Idle
+}
+trans first_retoho_idle_to_running {
+	first_state = Free and first_retoho_state = Idle
+	and (first_motion = First_Off)
+	and |first_state, first_retoho_state, first_motion|(
+		first_state' = Lock and first_retoho_state' = Running
+		and first_motion' = First_On
+	)
+}
+trans first_retoho_running_to_success_arrived {
+	first_state = Free and first_retoho_state = Running
+	and |first_state, first_retoho_state, first_motion|(
+		first_state' = Lock and first_retoho_state' = Success
+		and first_motion' = First_Off
+	)
+}
+trans first_retoho_running_to_failure_blocked {
+	first_state = Free and first_retoho_state = Running
+	and |first_state, first_retoho_state, first_motion|(
+		first_state' = Lock and first_retoho_state' = Failure
+		and first_motion' = First_Off
+	)
+}
+trans first_retoho_running_to_interrupting {
+	first_state = Free and first_retoho_state = Running
+	and |first_retoho_state|(first_retoho_state' = Interrupting)
+}
+trans first_retoho_interrupting_to_interrupted {
+	first_state = Free and first_retoho_state = Interrupting
+	and |first_state, first_retoho_state, first_motion|(
+		first_state' = Lock and first_retoho_state' = Interrupted
+		and first_motion' = First_Off
+	)
+}
+
+// -------------------- Skill recharge --------------------
+
+var first_recharge_state: SkillState
+
+init first_recharge {
+	first_recharge_state = Idle
+}
+trans first_recharge_idle_to_running {
+	first_state = Free and first_recharge_state = Idle
+	and (first_battery != First_Normal)
+	and (first_motion = First_Off)
+	and |first_state, first_recharge_state|(
+		first_state' = Lock and first_recharge_state' = Running
+	)
+}
+trans first_recharge_running_to_success_charged {
+	first_state = Free and first_recharge_state = Running
+	and |first_state, first_recharge_state, first_battery|(
+		first_state' = Lock and first_recharge_state' = Success
+		and first_battery' = First_Normal
+	)
+}
+trans first_recharge_running_to_failure_emergency {
+	first_state = Free and first_recharge_state = Running
+	and |first_state, first_recharge_state|(
+		first_state' = Lock and first_recharge_state' = Failure
+	)
+}
+trans first_recharge_running_to_interrupting {
+	first_state = Free and first_recharge_state = Running
+	and |first_recharge_state|(first_recharge_state' = Interrupting)
+}
+trans first_recharge_interrupting_to_interrupted {
+	first_state = Free and first_recharge_state = Interrupting
+	and |first_state, first_recharge_state|(
+		first_state' = Lock and first_recharge_state' = Interrupted
+	)
+}
+// ==================== Resouces ====================
+
+enum Second_Battery = { Second_Normal, Second_Low, Second_Critical }
+var second_battery: Second_Battery
+
+enum Second_Motion = { Second_On, Second_Off }
+var second_motion: Second_Motion
+
+init init_second_resources {
+  second_battery = Second_Normal and second_motion = Second_Off
+}
+
+// ==================== Events ====================
+
+trans second_from_normal_to_low {
+	second_state = Free and (second_battery = Second_Normal) and 
+	|second_state, second_battery|(
+		second_state' = Lock
+		and second_battery' = Second_Low
+	)
+}
+// ==================== Skillset ====================
+var second_state: SkillsetState
+
+init init_second {
+	second_state = Free
+}
+
+trans second_invariants_propagation {
+	second_state = Lock and
+	if second_goto_state = Running and not (second_motion = Second_On) then
+		|second_goto_state|(
+			second_goto_state' = InvariantFailure
+		)
+	elif second_goto_state = Running and not (second_battery != Second_Critical) then
+		|second_goto_state, second_motion|(
+			second_goto_state' = InvariantFailure
+			and second_motion' = Second_Off
+		)
+	elif second_retoho_state = Running and not (second_motion = Second_On) then
+		|second_retoho_state|(
+			second_retoho_state' = InvariantFailure
+		)
+	elif second_recharge_state = Running and not (second_motion = Second_Off) then
+		|second_recharge_state|(
+			second_recharge_state' = InvariantFailure
+		)
+	else
+		|second_state, second_goto_state, second_retoho_state, second_recharge_state|(
+			if second_goto_state = InvariantFailure or second_goto_state = Success or second_goto_state = Failure or second_goto_state = Interrupted then
+				second_goto_state' = Idle
+			else
+				second_goto_state' = second_goto_state
+			end and
+			if second_retoho_state = InvariantFailure or second_retoho_state = Success or second_retoho_state = Failure or second_retoho_state = Interrupted then
+				second_retoho_state' = Idle
+			else
+				second_retoho_state' = second_retoho_state
+			end and
+			if second_recharge_state = InvariantFailure or second_recharge_state = Success or second_recharge_state = Failure or second_recharge_state = Interrupted then
+				second_recharge_state' = Idle
+			else
+				second_recharge_state' = second_recharge_state
+			end and
+			second_state' = Free
+		)
+	end
+}
+
+// ==================== Skill ====================
+
+// -------------------- Skill goto --------------------
+
+var second_goto_state: SkillState
+
+init second_goto {
+	second_goto_state = Idle
+}
+trans second_goto_idle_to_running {
+	second_state = Free and second_goto_state = Idle
+	and (second_battery = Second_Normal)
+	and (second_motion = Second_Off)
+	and |second_state, second_goto_state, second_motion|(
+		second_state' = Lock and second_goto_state' = Running
+		and second_motion' = Second_On
+	)
+}
+trans second_goto_running_to_success_arrived {
+	second_state = Free and second_goto_state = Running
+	and |second_state, second_goto_state, second_motion, second_battery|(
+		second_state' = Lock and second_goto_state' = Success
+		and second_motion' = Second_Off
+		and second_battery' = Second_Low
+	)
+}
+trans second_goto_running_to_success_arrived_2 {
+	second_state = Free and second_goto_state = Running
+	and |second_state, second_goto_state, second_motion, second_battery|(
+		second_state' = Lock and second_goto_state' = Success
+		and second_motion' = Second_Off
+		and second_battery' = Second_Critical
+	)
+}
+trans second_goto_running_to_failure_blocked {
+	second_state = Free and second_goto_state = Running
+	and |second_state, second_goto_state, second_motion, second_battery|(
+		second_state' = Lock and second_goto_state' = Failure
+		and second_motion' = Second_Off
+		and second_battery' = Second_Low
+	)
+}
+trans second_goto_running_to_interrupting {
+	second_state = Free and second_goto_state = Running
+	and |second_goto_state|(second_goto_state' = Interrupting)
+}
+trans second_goto_interrupting_to_interrupted {
+	second_state = Free and second_goto_state = Interrupting
+	and |second_state, second_goto_state, second_motion, second_battery|(
+		second_state' = Lock and second_goto_state' = Interrupted
+		and second_motion' = Second_Off
+		and second_battery' = Second_Low
+	)
+}
+
+// -------------------- Skill retoho --------------------
+
+var second_retoho_state: SkillState
+
+init second_retoho {
+	second_retoho_state = Idle
+}
+trans second_retoho_idle_to_running {
+	second_state = Free and second_retoho_state = Idle
+	and (second_motion = Second_Off)
+	and |second_state, second_retoho_state, second_motion|(
+		second_state' = Lock and second_retoho_state' = Running
+		and second_motion' = Second_On
+	)
+}
+trans second_retoho_running_to_success_arrived {
+	second_state = Free and second_retoho_state = Running
+	and |second_state, second_retoho_state, second_motion|(
+		second_state' = Lock and second_retoho_state' = Success
+		and second_motion' = Second_Off
+	)
+}
+trans second_retoho_running_to_failure_blocked {
+	second_state = Free and second_retoho_state = Running
+	and |second_state, second_retoho_state, second_motion|(
+		second_state' = Lock and second_retoho_state' = Failure
+		and second_motion' = Second_Off
+	)
+}
+trans second_retoho_running_to_interrupting {
+	second_state = Free and second_retoho_state = Running
+	and |second_retoho_state|(second_retoho_state' = Interrupting)
+}
+trans second_retoho_interrupting_to_interrupted {
+	second_state = Free and second_retoho_state = Interrupting
+	and |second_state, second_retoho_state, second_motion|(
+		second_state' = Lock and second_retoho_state' = Interrupted
+		and second_motion' = Second_Off
+	)
+}
+
+// -------------------- Skill recharge --------------------
+
+var second_recharge_state: SkillState
+
+init second_recharge {
+	second_recharge_state = Idle
+}
+trans second_recharge_idle_to_running {
+	second_state = Free and second_recharge_state = Idle
+	and (second_battery != Second_Normal)
+	and (second_motion = Second_Off)
+	and |second_state, second_recharge_state|(
+		second_state' = Lock and second_recharge_state' = Running
+	)
+}
+trans second_recharge_running_to_success_charged {
+	second_state = Free and second_recharge_state = Running
+	and |second_state, second_recharge_state, second_battery|(
+		second_state' = Lock and second_recharge_state' = Success
+		and second_battery' = Second_Normal
+	)
+}
+trans second_recharge_running_to_failure_emergency {
+	second_state = Free and second_recharge_state = Running
+	and |second_state, second_recharge_state|(
+		second_state' = Lock and second_recharge_state' = Failure
+	)
+}
+trans second_recharge_running_to_interrupting {
+	second_state = Free and second_recharge_state = Running
+	and |second_recharge_state|(second_recharge_state' = Interrupting)
+}
+trans second_recharge_interrupting_to_interrupted {
+	second_state = Free and second_recharge_state = Interrupting
+	and |second_state, second_recharge_state|(
+		second_state' = Lock and second_recharge_state' = Interrupted
+	)
+}
+prop = G(F(first_goto_state = Success))
+
+search infinite + complete solve
+
