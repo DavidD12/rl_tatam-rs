@@ -1,0 +1,23 @@
+[package]
+name = "rl_tatam-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["David Doose <David.Doose@gmail.com>"]
+description = "'Robot Language' generator to tatam"
+license = "LGPL-3.0-only"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rl_model-rs = "0.1.1"
+clap = { version = "4.0.11", features = ["derive"] }
+env_logger = "0.8.4"
+heck = "0.4.1"
+
+[lib]
+name = "rl_tatam"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rl_tatam"
+path = "bin/main.rs"
