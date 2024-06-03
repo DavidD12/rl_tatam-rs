@@ -18,10 +18,10 @@ pub use expr::*;
 pub mod naming;
 pub use naming::*;
 
-pub fn to_tatam(model: &Model) -> String {
+pub fn to_tatam(skillset: &Skillset) -> String {
     let mut out = "".to_string();
 
-    out += &skillsets_to_tatam(model);
+    out += &skillset_to_tatam(skillset);
 
     out += "prop = G(F(custom_robot_goto_state = Success))\n";
     out += "\nsearch infinite + complete solve\n";

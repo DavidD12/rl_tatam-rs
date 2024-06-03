@@ -1,20 +1,10 @@
 use super::*;
 
-pub fn skillsets_to_tatam(model: &Model) -> String {
+pub fn skillset_to_tatam(skillset: &Skillset) -> String {
     let mut out = "".to_string();
 
     out += "enum SkillsetState = { Free, Lock }\n";
     out += "enum SkillState = { Idle, Running, Interrupting, InvariantFailure, Success, Failure, Interrupted}\n";
-
-    for skillset in model.skillsets() {
-        out += &skillset_to_tatam(skillset);
-    }
-
-    out
-}
-
-pub fn skillset_to_tatam(skillset: &Skillset) -> String {
-    let mut out = "".to_string();
 
     out += &resources_to_tatam(skillset);
     out += &events_to_tatam(skillset);

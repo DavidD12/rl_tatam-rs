@@ -23,17 +23,17 @@ fn main() {
         env_logger::init();
     }
     //
-    if let Ok(model) = load_model(&args.file) {
+    if let Ok(skillset) = load_skillset(&args.file) {
         if args.verbose >= 3 {
             println!("\n--------------------------------------------------\n");
-            println!("{}", model);
+            println!("{}", skillset);
         }
         if args.verbose >= 2 {
             println!("\n--------------------------------------------------\n");
-            println!("{}", model);
+            println!("{}", skillset);
         }
 
-        let tatam = to_tatam(&model);
+        let tatam = to_tatam(&skillset);
         println!("{}", tatam);
     }
 }
