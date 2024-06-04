@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use rl_model::model::*;
 
 pub mod skillset;
@@ -29,6 +31,14 @@ pub fn to_tatam(skillset: &Skillset) -> String {
     out
 }
 
-pub fn used_resources(effects: &Vec<Effect>) -> Vec<ResourceId> {
+pub fn effects_resources(effects: &Vec<Effect>) -> HashSet<ResourceId> {
     effects.iter().map(|e| e.resource().resolved()).collect()
+}
+
+pub fn postconsitions_resources(postconditions: &Vec<Postcondition>) -> HashSet<ResourceId> {
+    let mut resources = HashSet::default();
+    for post in postconditions {
+        resources.extend(expr_resources(post.expr()));
+    }
+    resources
 }

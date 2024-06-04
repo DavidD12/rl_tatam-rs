@@ -43,11 +43,13 @@ fn skill_running(skillset: &Skillset, skill: &Skill) -> String {
     for precond in skill.preconditions().iter() {
         out += &format!("\tand {}\n", expr_to_tatam(skillset, precond.expr()));
     }
-    // Effect
+    // Used Resources
+    let mut resources: HashSet<ResourceId> = HashSet::default();
+    resources.extend(effects_resources(skill.start()));
     out += &format!(
         "\tand |{}, {}|(\n",
         skillset_var(skillset),
-        used_resources(skill.start())
+        resources
             .iter()
             .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
             .fold(skill_var(skillset, skill), |acc, res| format!(
@@ -60,6 +62,7 @@ fn skill_running(skillset: &Skillset, skill: &Skill) -> String {
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
+    // Effects
     for effect in skill.start() {
         out += &format!(
             "\t\tand {}' = {}\n",
@@ -91,11 +94,15 @@ fn skill_success(skillset: &Skillset, skill: &Skill, success: &Success) -> Strin
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
-    // Effect
+    // Used Resources
+    let mut resources: HashSet<ResourceId> = HashSet::default();
+    resources.extend(effects_resources(success.effects()));
+    resources.extend(postconsitions_resources(success.postconditions()));
+
     out += &format!(
         "\tand |{}, {}|(\n",
         skillset_var(skillset),
-        used_resources(success.effects())
+        resources
             .iter()
             .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
             .fold(skill_var(skillset, skill), |acc, res| format!(
@@ -108,6 +115,7 @@ fn skill_success(skillset: &Skillset, skill: &Skill, success: &Success) -> Strin
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
+    // Effects
     for effect in success.effects() {
         out += &format!(
             "\t\tand {}' = {}\n",
@@ -117,6 +125,11 @@ fn skill_success(skillset: &Skillset, skill: &Skill, success: &Success) -> Strin
             ),
             resource_state(skillset, skillset.get(effect.state().resolved()).unwrap())
         );
+    }
+    // Postconditions
+    for post in success.postconditions() {
+        let expr = post.expr();
+        out += &format!("\t\tand {}\n", next_expr_to_tatam(skillset, expr));
     }
 
     out += "\t)\n";
@@ -139,11 +152,15 @@ fn skill_failure(skillset: &Skillset, skill: &Skill, failure: &Failure) -> Strin
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
-    // Effect
+    // Used Resources
+    let mut resources: HashSet<ResourceId> = HashSet::default();
+    resources.extend(effects_resources(failure.effects()));
+    resources.extend(postconsitions_resources(failure.postconditions()));
+
     out += &format!(
         "\tand |{}, {}|(\n",
         skillset_var(skillset),
-        used_resources(failure.effects())
+        resources
             .iter()
             .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
             .fold(skill_var(skillset, skill), |acc, res| format!(
@@ -156,6 +173,7 @@ fn skill_failure(skillset: &Skillset, skill: &Skill, failure: &Failure) -> Strin
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
+    // Effects
     for effect in failure.effects() {
         out += &format!(
             "\t\tand {}' = {}\n",
@@ -165,6 +183,11 @@ fn skill_failure(skillset: &Skillset, skill: &Skill, failure: &Failure) -> Strin
             ),
             resource_state(skillset, skillset.get(effect.state().resolved()).unwrap())
         );
+    }
+    // Postconditions
+    for post in failure.postconditions() {
+        let expr = post.expr();
+        out += &format!("\t\tand {}\n", next_expr_to_tatam(skillset, expr));
     }
 
     out += "\t)\n";
@@ -210,16 +233,26 @@ fn skill_interrupted(skillset: &Skillset, skill: &Skill) -> String {
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
-    // Effect
+    // Effects & Postconditions
     let effects = if let Some(interrupt) = skill.interrupt() {
         interrupt.effects().clone()
     } else {
         vec![]
     };
+    let postconditions = if let Some(interrupt) = skill.interrupt() {
+        interrupt.postconditions().clone()
+    } else {
+        vec![]
+    };
+    // Used Resources
+    let mut resources: HashSet<ResourceId> = HashSet::default();
+    resources.extend(effects_resources(&effects));
+    resources.extend(postconsitions_resources(&postconditions));
+
     out += &format!(
         "\tand |{}, {}|(\n",
         skillset_var(skillset),
-        used_resources(&effects)
+        resources
             .iter()
             .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
             .fold(skill_var(skillset, skill), |acc, res| format!(
@@ -232,6 +265,7 @@ fn skill_interrupted(skillset: &Skillset, skill: &Skill) -> String {
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
+    // Effects
     for effect in effects {
         out += &format!(
             "\t\tand {}' = {}\n",
@@ -241,6 +275,11 @@ fn skill_interrupted(skillset: &Skillset, skill: &Skill) -> String {
             ),
             resource_state(skillset, skillset.get(effect.state().resolved()).unwrap())
         );
+    }
+    // Postconditions
+    for post in postconditions.iter() {
+        let expr = post.expr();
+        out += &format!("\t\tand {}\n", next_expr_to_tatam(skillset, expr));
     }
 
     out += "\t)\n";

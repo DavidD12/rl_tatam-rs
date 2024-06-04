@@ -26,7 +26,7 @@ pub fn event_to_tatam(skillset: &Skillset, event: &Event) -> String {
     out += &format!(
         "\t|{}{}|(\n",
         skillset_var(skillset),
-        used_resources(event.effects())
+        effects_resources(event.effects())
             .iter()
             .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
             .fold("".to_string(), |acc, res| format!("{}, {}", acc, res))

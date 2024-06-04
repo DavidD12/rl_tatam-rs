@@ -50,7 +50,7 @@ fn skillset_invariant_propagation(skillset: &Skillset) -> String {
         );
         out += &format!(
             "\t\t|{}|(\n",
-            used_resources(first.effects())
+            effects_resources(first.effects())
                 .iter()
                 .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
                 .fold(skill_var(skillset, skill), |acc, res| format!(
@@ -80,7 +80,7 @@ fn skillset_invariant_propagation(skillset: &Skillset) -> String {
             );
             out += &format!(
                 "\t\t|{}|(\n",
-                used_resources(invariant.effects())
+                effects_resources(invariant.effects())
                     .iter()
                     .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
                     .fold(skill_var(skillset, skill), |acc, res| format!(

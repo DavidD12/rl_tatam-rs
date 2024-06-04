@@ -1,0 +1,156 @@
+enum SkillsetState = { Free, Lock }
+enum SkillState = { Idle, Running, Interrupting, InvariantFailure, Success, Failure, Interrupted}
+// ==================== Resouces ====================
+
+enum CustomRobot_Motion = { CustomRobot_On, CustomRobot_Off }
+var custom_robot_motion: CustomRobot_Motion
+
+enum CustomRobot_Battery = { CustomRobot_Normal, CustomRobot_Critical }
+var custom_robot_battery: CustomRobot_Battery
+
+init init_custom_robot_resources {
+  custom_robot_motion = CustomRobot_Off and custom_robot_battery = CustomRobot_Normal
+}
+
+// ==================== Events ====================
+
+trans custom_robot_battery_to_critical {
+	custom_robot_state = Free and (custom_robot_battery = CustomRobot_Normal) and 
+	|custom_robot_state, custom_robot_battery|(
+		custom_robot_state' = Lock
+		and custom_robot_battery' = CustomRobot_Critical
+	)
+}
+trans custom_robot_battery_to_normal {
+	custom_robot_state = Free and (custom_robot_battery = CustomRobot_Critical) and 
+	|custom_robot_state, custom_robot_battery|(
+		custom_robot_state' = Lock
+		and custom_robot_battery' = CustomRobot_Normal
+	)
+}
+// ==================== Skillset ====================
+var custom_robot_state: SkillsetState
+
+init init_custom_robot {
+	custom_robot_state = Free
+}
+
+trans custom_robot_invariants_propagation {
+	custom_robot_state = Lock and
+	if custom_robot_goto_state = Running and not (custom_robot_motion = CustomRobot_On) then
+		|custom_robot_goto_state|(
+			custom_robot_goto_state' = InvariantFailure
+		)
+	elif custom_robot_goto_state = Running and not (custom_robot_battery = CustomRobot_Normal) then
+		|custom_robot_goto_state, custom_robot_motion|(
+			custom_robot_goto_state' = InvariantFailure
+			and custom_robot_motion' = CustomRobot_Off
+		)
+	elif custom_robot_recharge_state = Running and not (custom_robot_motion = CustomRobot_Off) then
+		|custom_robot_recharge_state|(
+			custom_robot_recharge_state' = InvariantFailure
+		)
+	else
+		|custom_robot_state, custom_robot_goto_state, custom_robot_recharge_state|(
+			if custom_robot_goto_state = InvariantFailure or custom_robot_goto_state = Success or custom_robot_goto_state = Failure or custom_robot_goto_state = Interrupted then
+				custom_robot_goto_state' = Idle
+			else
+				custom_robot_goto_state' = custom_robot_goto_state
+			end and
+			if custom_robot_recharge_state = InvariantFailure or custom_robot_recharge_state = Success or custom_robot_recharge_state = Failure or custom_robot_recharge_state = Interrupted then
+				custom_robot_recharge_state' = Idle
+			else
+				custom_robot_recharge_state' = custom_robot_recharge_state
+			end and
+			custom_robot_state' = Free
+		)
+	end
+}
+
+// ==================== Skill ====================
+
+// -------------------- Skill goto --------------------
+
+var custom_robot_goto_state: SkillState
+
+init custom_robot_goto {
+	custom_robot_goto_state = Idle
+}
+trans custom_robot_goto_idle_to_running {
+	custom_robot_state = Free and custom_robot_goto_state = Idle
+	and (custom_robot_motion = CustomRobot_Off)
+	and (custom_robot_battery = CustomRobot_Normal)
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Running
+		and custom_robot_motion' = CustomRobot_On
+	)
+}
+trans custom_robot_goto_running_to_success_arrived {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Success
+		and custom_robot_motion' = CustomRobot_Off
+	)
+}
+trans custom_robot_goto_running_to_failure_blocked {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Failure
+		and custom_robot_motion' = CustomRobot_Off
+	)
+}
+trans custom_robot_goto_running_to_interrupting {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and |custom_robot_goto_state|(custom_robot_goto_state' = Interrupting)
+}
+trans custom_robot_goto_interrupting_to_interrupted {
+	custom_robot_state = Free and custom_robot_goto_state = Interrupting
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Interrupted
+		and custom_robot_motion' = CustomRobot_Off
+	)
+}
+
+// -------------------- Skill recharge --------------------
+
+var custom_robot_recharge_state: SkillState
+
+init custom_robot_recharge {
+	custom_robot_recharge_state = Idle
+}
+trans custom_robot_recharge_idle_to_running {
+	custom_robot_state = Free and custom_robot_recharge_state = Idle
+	and (custom_robot_battery != CustomRobot_Normal)
+	and (custom_robot_motion = CustomRobot_Off)
+	and |custom_robot_state, custom_robot_recharge_state|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Running
+	)
+}
+trans custom_robot_recharge_running_to_success_charged {
+	custom_robot_state = Free and custom_robot_recharge_state = Running
+	and |custom_robot_state, custom_robot_recharge_state, custom_robot_battery|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Success
+		and (custom_robot_battery' = CustomRobot_Normal)
+	)
+}
+trans custom_robot_recharge_running_to_failure_emergency {
+	custom_robot_state = Free and custom_robot_recharge_state = Running
+	and |custom_robot_state, custom_robot_recharge_state, custom_robot_battery|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Failure
+		and (custom_robot_battery' != CustomRobot_Normal)
+	)
+}
+trans custom_robot_recharge_running_to_interrupting {
+	custom_robot_state = Free and custom_robot_recharge_state = Running
+	and |custom_robot_recharge_state|(custom_robot_recharge_state' = Interrupting)
+}
+trans custom_robot_recharge_interrupting_to_interrupted {
+	custom_robot_state = Free and custom_robot_recharge_state = Interrupting
+	and |custom_robot_state, custom_robot_recharge_state|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Interrupted
+	)
+}
+prop = G(F(custom_robot_goto_state = Success))
+
+search infinite + complete solve
+
