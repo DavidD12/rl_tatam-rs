@@ -8,11 +8,51 @@ var custom_robot_motion: CustomRobot_Motion
 enum CustomRobot_Battery = { CustomRobot_Normal, CustomRobot_Critical }
 var custom_robot_battery: CustomRobot_Battery
 
+var battery_value: Int
+var custom_robot_battery_to_critical_request: Bool
+var custom_robot_battery_to_normal_request: Bool
+
 init init_custom_robot_resources {
-  custom_robot_motion = CustomRobot_Off and custom_robot_battery = CustomRobot_Critical
+  custom_robot_motion = CustomRobot_Off and custom_robot_battery = CustomRobot_Normal
+  and battery_value = 100 and custom_robot_battery_to_normal_request = false
+  and custom_robot_battery_to_critical_request = false
 }
 
 // ==================== Events ====================
+
+trans custom_robot_battery_to_critical {
+	custom_robot_state = Free and (custom_robot_battery = CustomRobot_Normal)
+	and custom_robot_battery_to_critical_request = true
+	and |custom_robot_state, custom_robot_battery, custom_robot_battery_to_critical_request|(
+		custom_robot_state' = Lock
+		and custom_robot_battery_to_critical_request' = false
+		and custom_robot_battery' = CustomRobot_Critical
+	)
+}
+trans custom_robot_battery_to_normal {
+	custom_robot_state = Free and (custom_robot_battery = CustomRobot_Critical)
+	and custom_robot_battery_to_normal_request = true
+	and |custom_robot_state, custom_robot_battery, custom_robot_battery_to_normal_request|(
+		custom_robot_state' = Lock
+		and custom_robot_battery_to_normal_request' = false
+		and custom_robot_battery' = CustomRobot_Normal
+	)
+}
+
+// ==================== Callback ====================
+
+trans critical_battery_callback {
+	battery_value <= 10 and custom_robot_battery != CustomRobot_Critical
+	and |custom_robot_battery_to_critical_request|(
+		custom_robot_battery_to_critical_request' = true
+	)
+}
+trans normal_battery_callback {
+	battery_value > 10 and custom_robot_battery != CustomRobot_Normal
+	and |custom_robot_battery_to_normal_request|(
+		custom_robot_battery_to_normal_request' = true
+	)
+}
 
 // ==================== Skillset ====================
 var custom_robot_state: SkillsetState
@@ -24,13 +64,15 @@ init init_custom_robot {
 trans custom_robot_invariants_propagation {
 	custom_robot_state = Lock and
 	if custom_robot_goto_state = Running and not (custom_robot_motion = CustomRobot_On) then
-		|custom_robot_goto_state|(
+		|custom_robot_goto_state, battery_value|(
 			custom_robot_goto_state' = InvariantFailure
+			and battery_value' = battery_value - 30
 		)
 	elif custom_robot_goto_state = Running and not (custom_robot_battery = CustomRobot_Normal) then
-		|custom_robot_goto_state, custom_robot_motion|(
+		|custom_robot_goto_state, custom_robot_motion, battery_value|(
 			custom_robot_goto_state' = InvariantFailure
 			and custom_robot_motion' = CustomRobot_Off
+			and battery_value' = battery_value - 30
 		)
 	elif custom_robot_recharge_state = Running and not (custom_robot_motion = CustomRobot_Off) then
 		|custom_robot_recharge_state|(
@@ -73,16 +115,18 @@ trans custom_robot_goto_idle_to_running {
 }
 trans custom_robot_goto_running_to_success_arrived {
 	custom_robot_state = Free and custom_robot_goto_state = Running
-	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion, battery_value|(
 		custom_robot_state' = Lock and custom_robot_goto_state' = Success
 		and custom_robot_motion' = CustomRobot_Off
+		and battery_value' = battery_value - 30
 	)
 }
 trans custom_robot_goto_running_to_failure_blocked {
 	custom_robot_state = Free and custom_robot_goto_state = Running
-	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion, battery_value|(
 		custom_robot_state' = Lock and custom_robot_goto_state' = Failure
 		and custom_robot_motion' = CustomRobot_Off
+		and battery_value' = battery_value - 30
 	)
 }
 trans custom_robot_goto_running_to_interrupting {
@@ -91,9 +135,10 @@ trans custom_robot_goto_running_to_interrupting {
 }
 trans custom_robot_goto_interrupting_to_interrupted {
 	custom_robot_state = Free and custom_robot_goto_state = Interrupting
-	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion, battery_value|(
 		custom_robot_state' = Lock and custom_robot_goto_state' = Interrupted
 		and custom_robot_motion' = CustomRobot_Off
+		and battery_value' = battery_value - 30
 	)
 }
 
@@ -114,9 +159,9 @@ trans custom_robot_recharge_idle_to_running {
 }
 trans custom_robot_recharge_running_to_success_charged {
 	custom_robot_state = Free and custom_robot_recharge_state = Running
-	and |custom_robot_state, custom_robot_recharge_state, custom_robot_battery|(
+	and |custom_robot_state, custom_robot_recharge_state, custom_robot_battery, battery_value|(
 		custom_robot_state' = Lock and custom_robot_recharge_state' = Success
-		and (custom_robot_battery' = CustomRobot_Normal)
+		and battery_value' = 100
 	)
 }
 trans custom_robot_recharge_running_to_failure_emergency {
@@ -137,23 +182,12 @@ trans custom_robot_recharge_interrupting_to_interrupted {
 	)
 }
 
-// on peut lancer goto infiniment souvent sans lancer recharge infiniment souvent
-// Solve : UNSAT k=6
-// prop = ((not ( G(not(custom_robot_recharge_state = Running)) and G(F(custom_robot_goto_state = Running)) )) and (custom_robot_goto_state = Running and F(custom_robot_goto_state != Running)) and (custom_robot_recharge_state = Running and F(custom_robot_recharge_state != Running)) and ((custom_robot_recharge_state = Success) implies (custom_robot_battery = CustomRobot_Normal)) and ((custom_robot_recharge_state = Failure) implies (custom_robot_battery != CustomRobot_Normal))) and ( G(F(custom_robot_goto_state = Running)) and G(not(custom_robot_recharge_state = Running)) )
 
-// un skill peut ne jamais terminer
-// Solve : UNSAT k=6
-// prop = ((not ( G(not(custom_robot_recharge_state = Running)) and G(F(custom_robot_goto_state = Running)) )) and (custom_robot_goto_state = Running and F(custom_robot_goto_state != Running)) and (custom_robot_recharge_state = Running and F(custom_robot_recharge_state != Running)) and ((custom_robot_recharge_state = Success) implies (custom_robot_battery = CustomRobot_Normal)) and ((custom_robot_recharge_state = Failure) implies (custom_robot_battery != CustomRobot_Normal))) and ((F(G(custom_robot_goto_state = Running))) or (F(G(custom_robot_recharge_state = Running))))
+// hypothèse de fonctionnement
+prop = (battery_value <= 10) implies (X(custom_robot_battery = CustomRobot_Critical))
 
-// recharge fini avec succès et la batterie reste dans l'état Critique (test de la post condition du succès)
-// modification pour la vérification : en mettant la batterie à l'état initial Critical
-// Solve : UNSAT k=10
-// prop = ((not ( G(not(custom_robot_recharge_state = Running)) and G(F(custom_robot_goto_state = Running)) )) and (custom_robot_goto_state = Running and F(custom_robot_goto_state != Running)) and (custom_robot_recharge_state = Running and F(custom_robot_recharge_state != Running)) and ((custom_robot_recharge_state = Success) implies (custom_robot_battery = CustomRobot_Normal)) and ((custom_robot_recharge_state = Failure) implies (custom_robot_battery != CustomRobot_Normal))) and ((F(custom_robot_recharge_state = Success and custom_robot_battery = CustomRobot_Critical)))
-
-// recharge fini autrement que sur un succès et la batterie passe à l'état Normal (test d'une post condition sur la recharge partielle)
-// modification pour la vérification : en mettant la batterie à l'état initial Critical
-// Solve : UNSAT k=10
-// prop = ((not ( G(not(custom_robot_recharge_state = Running)) and G(F(custom_robot_goto_state = Running)) )) and (custom_robot_goto_state = Running and F(custom_robot_goto_state != Running)) and (custom_robot_recharge_state = Running and F(custom_robot_recharge_state != Running)) and ((custom_robot_recharge_state = Success) implies (custom_robot_battery = CustomRobot_Normal)) and ((custom_robot_recharge_state = Failure) implies (custom_robot_battery != CustomRobot_Normal))) and (F((custom_robot_recharge_state = Failure or custom_robot_recharge_state = Interrupted or custom_robot_recharge_state = InvariantFailure) and custom_robot_battery = CustomRobot_Normal))
+// prop = ((battery_value <= 10) implies (X(X(custom_robot_battery = CustomRobot_Critical)))) and ((battery_value > 10) implies (X(X(custom_robot_battery = CustomRobot_Normal)))) and (F(custom_robot_battery = CustomRobot_Critical))
+// prop = F(custom_robot_battery = CustomRobot_Critical)
 
 search infinite + complete solve
 

@@ -21,20 +21,20 @@ skillset custom_robot<Position, Float> {
         }
     }
 
-    // event {
-    //     battery_to_critical {
-    //         guard battery == Normal
-    //         effect {
-    //             battery -> Critical
-    //         }
-    //     }
-    //     battery_to_normal {
-    //         guard battery == Critical
-    //         effect {
-    //             battery -> Normal
-    //         }
-    //     }
-    // }
+    event {
+        battery_to_critical {
+            guard battery == Normal
+            effect {
+                battery -> Critical
+            }
+        }
+        battery_to_normal {
+            guard battery == Critical
+            effect {
+                battery -> Normal
+            }
+        }
+    }
 
 
     skill goto {
