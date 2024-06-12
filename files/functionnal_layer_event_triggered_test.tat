@@ -43,12 +43,14 @@ trans custom_robot_battery_to_normal {
 
 trans critical_battery_callback {
 	battery_value <= 10 and custom_robot_battery != CustomRobot_Critical
+	and custom_robot_battery_to_critical_request != true
 	and |custom_robot_battery_to_critical_request|(
 		custom_robot_battery_to_critical_request' = true
 	)
 }
 trans normal_battery_callback {
 	battery_value > 10 and custom_robot_battery != CustomRobot_Normal
+	and custom_robot_battery_to_normal_request != true
 	and |custom_robot_battery_to_normal_request|(
 		custom_robot_battery_to_normal_request' = true
 	)
@@ -161,6 +163,7 @@ trans custom_robot_recharge_running_to_success_charged {
 	custom_robot_state = Free and custom_robot_recharge_state = Running
 	and |custom_robot_state, custom_robot_recharge_state, custom_robot_battery, battery_value|(
 		custom_robot_state' = Lock and custom_robot_recharge_state' = Success
+		and (custom_robot_battery' = CustomRobot_Normal)
 		and battery_value' = 100
 	)
 }
@@ -183,11 +186,46 @@ trans custom_robot_recharge_interrupting_to_interrupted {
 }
 
 
-// hypothèse de fonctionnement
-prop = (battery_value <= 10) implies (X(custom_robot_battery = CustomRobot_Critical))
 
+
+
+// on peut lancer goto infiniment souvent sans lancer recharge infiniment souvent
+// prop = G(F(custom_robot_goto_state = Running)) and F(G(custom_robot_recharge_state != Running))
+// contre exemple sans spec : Solve : SAT
+// prop = ((not( F(G(custom_robot_recharge_state != Running)) and G(F(custom_robot_goto_state = Running)) )) and (not(F(G(custom_robot_goto_state = Running))) and not(F(G(custom_robot_recharge_state = Running))))) and  (G(F(custom_robot_goto_state = Running)) and F(G(custom_robot_recharge_state != Running)))
+// contre exemple avec spec : Solve : UNSAT k = 6
+// prop = (G(F(custom_robot_goto_state = Running))) implies F(custom_robot_battery = CustomRobot_Critical)
+// variante de la spec de déchargelent : Solve : UNSAT k = 6
+// notes : c'est unsat car goto ne change pas l'état de la resource batterie
+// prop = (G(F(custom_robot_goto_state = Running)) and F(G(custom_robot_recharge_state != Running))) and (((G(F(custom_robot_goto_state = Running))) implies F(custom_robot_battery = CustomRobot_Critical)) and (not(F(G(custom_robot_goto_state = Running))) and not(F(G(custom_robot_recharge_state = Running)))))
+// contre exemple avec variante de la spec : Solve : UNSAT k = 6
+// notes : c'est unsat car goto ne change pas l'état de la resource batterie
+
+// un skill peut ne jamais terminer
+// prop = ( F(G(custom_robot_goto_state = Running)) ) or ( F(G(custom_robot_recharge_state = Running)) )
+// contre exemple sans spec : Solve : UNSAT k = 5
+// prop = ((not( F(G(custom_robot_recharge_state != Running)) and G(F(custom_robot_goto_state = Running)) )) and (not(F(G(custom_robot_goto_state = Running))) and not(F(G(custom_robot_recharge_state = Running))))) and ( F(G(custom_robot_goto_state = Running)) ) or ( F(G(custom_robot_recharge_state = Running)) )
+// contre exemple avec spec : Solve : UNSAT k = 6
+// prop = (( F(G(custom_robot_goto_state = Running)) ) or ( F(G(custom_robot_recharge_state = Running)) )) and (((G(F(custom_robot_goto_state = Running))) implies F(custom_robot_battery = CustomRobot_Critical)) and (not(F(G(custom_robot_goto_state = Running))) and not(F(G(custom_robot_recharge_state = Running)))))
+// contre exemple avec variante de la spec : Solve : UNSAT k = 6
+// notes : c'est unsat car goto ne change pas l'état de la resource batterie
+
+
+
+
+// TO TRY AFTER BUG CORRECTION OF X OPERATOR
+
+// hypothèse de fonctionnement :
+// 		- piste 1, utilliser opérateur X : l'exemple de plusieurs event qui doivent être déclenchés montre qu'il en faudrait un nbr arbitrairement grand du style XX OR (XX)² ...
+// 		- piste 2, donc utiliser opérateur F : l'exemple de goto qui s'exécuterais autant de fois que voulu entre la callback qui demande changement de la batterie et l'event qui se lance montre que F n'est pas suffisant
+// 		- piste 3, on veut exprimer que l'event se lance au plus tôt dès que possible dès qu'il reçois la requête : on voudrais forcer la prise de la transition de l'event dès que possible, mais on va se passer du concept de transition urgente
+// 			-> solution : on restreint les transitions du système (sauf celles concernant les vérifict° d'invariants) à ne pas être prises si une requête d'event est vraie/demandée
+
+// Question, est-ce que tatam cherche à faire toutes les transitions possibles en // ?
+// 		- ça m'arrangerais pour être sur que les callback se lancent dès que possible
+
+// prop = (battery_value <= 10) implies (X(custom_robot_battery = CustomRobot_Critical))
 // prop = ((battery_value <= 10) implies (X(X(custom_robot_battery = CustomRobot_Critical)))) and ((battery_value > 10) implies (X(X(custom_robot_battery = CustomRobot_Normal)))) and (F(custom_robot_battery = CustomRobot_Critical))
 // prop = F(custom_robot_battery = CustomRobot_Critical)
 
 search infinite + complete solve
-
