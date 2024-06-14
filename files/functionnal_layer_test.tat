@@ -140,7 +140,7 @@ trans custom_robot_recharge_interrupting_to_interrupted {
 // on peut lancer goto infiniment souvent sans lancer recharge infiniment souvent
 // prop = G(F(custom_robot_goto_state = Running)) and F(G(custom_robot_recharge_state != Running))
 // contre exemple sans spec : Solve : SAT
-// prop = ((not( F(G(custom_robot_recharge_state != Running)) and G(F(custom_robot_goto_state = Running)) )) and (not(F(G(custom_robot_goto_state = Running))) and not(F(G(custom_robot_recharge_state = Running))))) and  (G(F(custom_robot_goto_state = Running)) and F(G(custom_robot_recharge_state != Running)))
+// prop = ((not( F(G(custom_robot_recharge_state != Running)) and G(F(custom_robot_goto_state = Running)) )) and (not(F(G(custom_robot_goto_state = Running))) and not(F(G(custom_robot_recharge_state = Running))))) and (G(F(custom_robot_goto_state = Running)) and F(G(custom_robot_recharge_state != Running)))
 // contre exemple avec spec : Solve : UNSAT k = 6
 // prop = (G(F(custom_robot_goto_state = Running))) implies F(custom_robot_battery = CustomRobot_Critical)
 // variante de la spec de déchargelent : Solve : UNSAT k = 6
@@ -160,3 +160,13 @@ trans custom_robot_recharge_interrupting_to_interrupted {
 
 search infinite + complete solve
 
+
+
+// investige le k=0 première propriété
+// retirer les hypothèse de fonctinnel redondants
+// regarde aussi avec les traces finies
+// une formule pour les hypothèse couche fonctionnelle
+// pense à utiliser X true pour faire les du formules en une si une formule par type de trace
+// fait machine à état du fonctionnel : requête pour lancer des skills
+// 		test avec de l'accessibilité avec des traces truncated
+// test unitaires sur tatam

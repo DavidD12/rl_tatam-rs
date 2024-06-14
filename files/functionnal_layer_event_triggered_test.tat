@@ -223,6 +223,7 @@ trans custom_robot_recharge_interrupting_to_interrupted {
 
 // Question, est-ce que tatam cherche à faire toutes les transitions possibles en // ?
 // 		- ça m'arrangerais pour être sur que les callback se lancent dès que possible
+//	-> avec les variables fixées, dans mon cs la callback empêchera de lancer une autre transition
 
 // prop = (battery_value <= 10) implies (X(custom_robot_battery = CustomRobot_Critical))
 // prop = ((battery_value <= 10) implies (X(X(custom_robot_battery = CustomRobot_Critical)))) and ((battery_value > 10) implies (X(X(custom_robot_battery = CustomRobot_Normal)))) and (F(custom_robot_battery = CustomRobot_Critical))
