@@ -20,12 +20,18 @@ pub use expr::*;
 pub mod naming;
 pub use naming::*;
 
-pub fn to_tatam(skillset: &Skillset) -> String {
+pub mod comp_skill_parser;
+pub use comp_skill_parser::*;
+
+pub mod skill_interface;
+pub use skill_interface::*;
+
+pub fn to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>) -> String {
     let mut out = "".to_string();
 
-    out += &skillset_to_tatam(skillset);
+    out += &skillset_to_tatam(skillset, composite_skill_names);
 
-    out += "prop = G(F(custom_robot_goto_state = Success))\n";
+    out += "\nprop = true\n";
     out += "\nsearch infinite + complete solve\n";
 
     out

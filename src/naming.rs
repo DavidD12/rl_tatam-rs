@@ -30,11 +30,6 @@ pub fn skill_fact_pred_name(skillset: &Skillset, skill: &Skill) -> String {
         &skillset.name().to_snake_case(),
         &skill.name().to_snake_case(),
     )
-    // format!(
-    //     "{}_{}",
-    //     skillset.name().to_snake_case(),
-    //     skill.name().to_snake_case()
-    // )
 }
 
 pub fn skill_var(skillset: &Skillset, skill: &Skill) -> String {
@@ -42,11 +37,22 @@ pub fn skill_var(skillset: &Skillset, skill: &Skill) -> String {
         &skillset.name().to_snake_case(),
         &skill.name().to_snake_case(),
     ) + "_state"
-    // format!(
-    //     "{}_{}_state",
-    //     skillset.name().to_snake_case(),
-    //     skill.name().to_snake_case()
-    // )
+}
+
+// Interface
+
+pub fn interface_var(skillset: &Skillset, skill: &Skill, composite_name: &String) -> String {
+    string_string(&composite_name.to_snake_case(), &string_string(
+        &skillset.name().to_snake_case(),
+        &skill.name().to_snake_case(),
+    )) + "_interface_state"
+}
+
+pub fn interface_result_var(skillset: &Skillset, skill: &Skill, composite_name: &String) -> String {
+    string_string(&composite_name.to_snake_case(), &string_string(
+        &skillset.name().to_snake_case(),
+        &skill.name().to_snake_case(),
+    )) + "_result"
 }
 
 // Resource
@@ -56,11 +62,6 @@ pub fn resource_enum(skillset: &Skillset, resource: &Resource) -> String {
         &skillset.name().to_upper_camel_case(),
         &resource.name().to_upper_camel_case(),
     )
-    // format!(
-    //     "{}_{}",
-    //     skillset.name().to_upper_camel_case(),
-    //     resource.name().to_upper_camel_case()
-    // )
 }
 
 pub fn resource_state(skillset: &Skillset, state: &State) -> String {
@@ -68,11 +69,6 @@ pub fn resource_state(skillset: &Skillset, state: &State) -> String {
         &skillset.name().to_upper_camel_case(),
         &state.name().to_upper_camel_case(),
     )
-    // format!(
-    //     "{}_{}",
-    //     skillset.name().to_upper_camel_case(),
-    //     state.name().to_upper_camel_case()
-    // )
 }
 
 pub fn resource_var(skillset: &Skillset, resource: &Resource) -> String {
@@ -80,11 +76,6 @@ pub fn resource_var(skillset: &Skillset, resource: &Resource) -> String {
         &skillset.name().to_snake_case(),
         &resource.name().to_snake_case(),
     )
-    // format!(
-    //     "{}_{}",
-    //     skillset.name().to_snake_case(),
-    //     resource.name().to_snake_case()
-    // )
 }
 
 // Event
@@ -94,9 +85,4 @@ pub fn event_name(skillset: &Skillset, event: &Event) -> String {
         &skillset.name().to_snake_case(),
         &event.name().to_snake_case(),
     )
-    // format!(
-    //     "{}_{}",
-    //     skillset.name().to_snake_case(),
-    //     event.name().to_snake_case()
-    // )
 }
