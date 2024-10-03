@@ -53,7 +53,8 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
         let skill = skillset.get(first.id().0).unwrap();
         let guard = first.guard();
         out += &format!(
-            "\tif {} = Running and not {} then\n",
+            "\tif ({} = Running or {} = Interrupting) and not {} then\n",
+            skill_var(skillset, skill),
             skill_var(skillset, skill),
             expr_to_tatam(skillset, guard)
         );
@@ -83,7 +84,8 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
             let skill = skillset.get(invariant.id().0).unwrap();
             let guard = invariant.guard();
             out += &format!(
-                "\telif {} = Running and not {} then\n",
+                "\telif ({} = Running or {} = Interrupting) and not {} then\n",
+                skill_var(skillset, skill),
                 skill_var(skillset, skill),
                 expr_to_tatam(skillset, guard)
             );
@@ -132,17 +134,17 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
             out += &format!("\t\t\tif {} = InvariantFailure or {} = Success or {} = Failure or {} = Interrupted then\n", skill_var(skillset, skill), skill_var(skillset, skill), skill_var(skillset, skill), skill_var(skillset, skill));
             out += &format!("\t\t\t\t{}' = Idle\n", skill_var(skillset, skill));
             for comp_name in composite_skill_names {
-                out += &format!("\t\t\tand if {} = WaitResult then\n", &interface_var(skillset, skill, &comp_name));
-                out += &format!("\t\t\t\t{}' = NoCall and\n", &interface_var(skillset, skill, &comp_name));
-                out += &format!("\t\t\t\tif {} = InvariantFailure then\n\t\t\t\t\t{}' = InvaFailRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
-                out += &format!("\t\t\t\telif {} = Success then\n\t\t\t\t\t{}' = SuccessRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
-                out += &format!("\t\t\t\telif {} = Failure then\n\t\t\t\t\t{}' = FailureRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
-                out += &format!("\t\t\t\telif {} = Interrupted then\n\t\t\t\t\t{}' = InterruptionRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
-                out += &format!("\t\t\t\telse\n\t\t\t\t\t{}' = NoneRes\n", &interface_result_var(skillset, skill, &comp_name));
+                out += &format!("\t\t\t\tand if {} = WaitResult then\n", &interface_var(skillset, skill, &comp_name));
+                out += &format!("\t\t\t\t\t{}' = NoCall and\n", &interface_var(skillset, skill, &comp_name));
+                out += &format!("\t\t\t\t\tif {} = InvariantFailure then\n\t\t\t\t\t\t{}' = InvaFailRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
+                out += &format!("\t\t\t\t\telif {} = Success then\n\t\t\t\t\t\t{}' = SuccessRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
+                out += &format!("\t\t\t\t\telif {} = Failure then\n\t\t\t\t\t\t{}' = FailureRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
+                out += &format!("\t\t\t\t\telif {} = Interrupted then\n\t\t\t\t\t\t{}' = InterruptionRes\n", &skill_var(skillset, skill), &interface_result_var(skillset, skill, &comp_name));
+                out += &format!("\t\t\t\t\telse\n\t\t\t\t\t\t{}' = NoneRes\n", &interface_result_var(skillset, skill, &comp_name));
+                out += "\t\t\t\t\tend\n";
+                out += "\t\t\t\telse\n";
+                out += &format!("\t\t\t\t\t{}' = {} and {}' = {}\n", &interface_var(skillset, skill, &comp_name), &interface_var(skillset, skill, &comp_name), &interface_result_var(skillset, skill, &comp_name), &interface_result_var(skillset, skill, &comp_name));
                 out += "\t\t\t\tend\n";
-                out += "\t\t\telse\n";
-                out += &format!("\t\t\t\t{}' = {} and {}' = {}\n", &interface_var(skillset, skill, &comp_name), &interface_var(skillset, skill, &comp_name), &interface_result_var(skillset, skill, &comp_name), &interface_result_var(skillset, skill, &comp_name));
-                out += "\t\t\tend\n";
             }
             out += "\t\t\telse\n";
             out += &format!(
@@ -150,6 +152,9 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
                 skill_var(skillset, skill),
                 skill_var(skillset, skill)
             );
+            for comp_name in composite_skill_names {
+                out += &format!("\t\t\t\tand {}' = {} and {}' = {}\n", &interface_var(skillset, skill, &comp_name), &interface_var(skillset, skill, &comp_name), &interface_result_var(skillset, skill, &comp_name), &interface_result_var(skillset, skill, &comp_name));
+            }
             out += "\t\t\tend and\n";
         }
         out += &format!("\t\t\t{}' = Free\n", skillset_var(skillset));

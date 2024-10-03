@@ -291,7 +291,7 @@ fn skill_running_to_interrupting(skillset: &Skillset, skill: &Skill) -> String {
         skill.name()
     );
     out += &format!(
-        "\t{} = Free and {} = Running\n",
+        "\t{} = Free and {} = Running and false\n",// remove 'and false'
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
