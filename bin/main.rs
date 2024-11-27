@@ -1,6 +1,7 @@
 use clap::Parser;
 use rl_model::*;
 use rl_tatam::to_tatam;
+use rl_tatam::lines_from_file;
 use std::env;
 
 #[derive(Parser, Debug)]
@@ -9,6 +10,9 @@ struct Args {
     /// robot language file
     #[arg(short, long)]
     file: String,
+    /// composite skill name file
+    #[arg(short, long, default_value_t = String::new())]
+    composite: String,
     /// verbose level
     #[arg(short, long, default_value_t = 1)]
     verbose: u8,
@@ -33,7 +37,7 @@ fn main() {
             println!("{}", skillset);
         }
 
-        let tatam = to_tatam(&skillset);
+        let tatam = to_tatam(&skillset, &lines_from_file(&args.composite));
         println!("{}", tatam);
     }
 }
