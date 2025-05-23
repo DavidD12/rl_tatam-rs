@@ -1,7 +1,8 @@
 use super::*;
 
-pub fn skill_to_tatam(skillset: &Skillset, skill: &Skill, composite_skill_names: &Vec<String>) -> String {
+pub fn skill_to_tatam(skillset: &Skillset, skill: &Skill, composite_skill_names: &Vec<String>, label: bool) -> ModelTransNames {
     let mut out = String::new();
+    let mut trans_names : Vec<String> = vec![];
 
     out += &format!(
         "\n// -------------------- Skill {} --------------------\n",
@@ -15,24 +16,39 @@ pub fn skill_to_tatam(skillset: &Skillset, skill: &Skill, composite_skill_names:
     out += "}\n";
     
     if composite_skill_names.is_empty() {
-        out += &skill_idle_to_running(skillset, skill, &String::new());
+        let result = skill_idle_to_running(skillset, skill, &String::new(), label);
+        out += &result.model;
+        trans_names.extend(result.transition_names);
     } else {
         for compo_name in composite_skill_names {
             out += &skill_idle_to_idle_precond_false(skillset, skill, compo_name);
-            out += &skill_idle_to_running(skillset, skill, compo_name);
+            let result = skill_idle_to_running(skillset, skill, compo_name, label);
+            out += &result.model;
+            trans_names.extend(result.transition_names);
             out += &skill_running_to_running_busy(skillset, skill, compo_name);
         }
     }
     for success in skill.successes() {
-        out += &skill_running_to_success(skillset, skill, success);
+        let result = skill_running_to_success(skillset, skill, success, label);
+        out += &result.model;
+        trans_names.extend(result.transition_names);
     }
     for failure in skill.failures() {
-        out += &skill_running_to_failure(skillset, skill, failure);
+        let result = skill_running_to_failure(skillset, skill, failure, label);
+        out += &result.model;
+        trans_names.extend(result.transition_names);
     }
-    out += &skill_running_to_interrupting(skillset, skill);
-    out += &skill_interrupting_to_interrupted(skillset, skill);
+    let result = skill_running_to_interrupting(skillset, skill, label);
+    out += &result.model;
+    trans_names.extend(result.transition_names);
+    let result = skill_interrupting_to_interrupted(skillset, skill, label);
+    out += &result.model;
+    trans_names.extend(result.transition_names);
 
-    out
+    ModelTransNames {
+        model: out,
+        transition_names: trans_names,
+    }
 }
 
 fn skill_idle_to_idle_precond_false(skillset: &Skillset, skill: &Skill, compo_name: &String) -> String {
@@ -70,8 +86,9 @@ fn skill_idle_to_idle_precond_false(skillset: &Skillset, skill: &Skill, compo_na
     out
 }
 
-fn skill_idle_to_running(skillset: &Skillset, skill: &Skill, compo_name: &String) -> String {
+fn skill_idle_to_running(skillset: &Skillset, skill: &Skill, compo_name: &String, label: bool) -> ModelTransNames {
     let mut out = String::new();
+    let mut trans_names = vec![];
 
     out += "trans ";
     if !compo_name.is_empty() {
@@ -82,6 +99,7 @@ fn skill_idle_to_running(skillset: &Skillset, skill: &Skill, compo_name: &String
         skillset.name(),
         skill.name()
     );
+    trans_names.push(format!("{}_{}_idle_to_running", skillset.name(), skill.name()));
     out += &format!(
         "\t{} = Free and {} = Idle\n",
         skillset_var(skillset),
@@ -110,7 +128,10 @@ fn skill_idle_to_running(skillset: &Skillset, skill: &Skill, compo_name: &String
     if !compo_name.is_empty() {
         out += &format!(", {}", &interface_var(skillset, skill, &compo_name));
     }
-        out += "|(\n";
+    if label {
+        out += &format!(", {}", &trans_label_variable());
+    }
+    out += "|(\n";
     out += &format!(
         "\t\t{}' = Lock and {}' = Running\n",
         skillset_var(skillset),
@@ -131,10 +152,17 @@ fn skill_idle_to_running(skillset: &Skillset, skill: &Skill, compo_name: &String
         out += &format!("\t\tand {}' = WaitResult\n", &interface_var(skillset, skill, &compo_name));
     }
 
+    if label {
+        out += &format!("\t\t\tand {}' = {}\n", &trans_label_variable(), &trans_label_enum_value(&format!("{}_{}_idle_to_running", skillset.name(), skill.name())));
+    }
+
     out += "\t)\n";
     out += "}\n";
 
-    out
+    ModelTransNames {
+        model: out,
+        transition_names: trans_names,
+    }
 }
 
 fn skill_running_to_running_busy(skillset: &Skillset, skill: &Skill, compo_name: &String) -> String {
@@ -166,8 +194,9 @@ fn skill_running_to_running_busy(skillset: &Skillset, skill: &Skill, compo_name:
     out
 }
 
-fn skill_running_to_success(skillset: &Skillset, skill: &Skill, success: &Success) -> String {
+fn skill_running_to_success(skillset: &Skillset, skill: &Skill, success: &Success, label: bool) -> ModelTransNames {
     let mut out = String::new();
+    let mut trans_names = vec![];
 
     out += &format!(
         "trans {}_{}_running_to_success_{} {{\n",
@@ -175,6 +204,7 @@ fn skill_running_to_success(skillset: &Skillset, skill: &Skill, success: &Succes
         skill.name(),
         success.name()
     );
+    trans_names.push(format!( "{}_{}_running_to_success_{}", skillset.name(), skill.name(), success.name()));
     out += &format!(
         "\t{} = Free and {} = Running\n",
         skillset_var(skillset),
@@ -186,7 +216,7 @@ fn skill_running_to_success(skillset: &Skillset, skill: &Skill, success: &Succes
     resources.extend(postconsitions_resources(success.postconditions()));
 
     out += &format!(
-        "\tand |{}, {}|(\n",
+        "\tand |{}, {}",
         skillset_var(skillset),
         resources
             .iter()
@@ -196,6 +226,11 @@ fn skill_running_to_success(skillset: &Skillset, skill: &Skill, success: &Succes
                 acc, res
             ))
     );
+    if label {
+        out += &format!(", {}", &trans_label_variable())
+    }
+    out += "|(\n";
+
     out += &format!(
         "\t\t{}' = Lock and {}' = Success\n",
         skillset_var(skillset),
@@ -217,15 +252,22 @@ fn skill_running_to_success(skillset: &Skillset, skill: &Skill, success: &Succes
         let expr = post.expr();
         out += &format!("\t\tand {}\n", next_expr_to_tatam(skillset, expr));
     }
+    if label {
+        out += &format!("\t\t\tand {}' = {}\n", &trans_label_variable(), &trans_label_enum_value(&format!( "{}_{}_running_to_success_{}", skillset.name(), skill.name(), success.name())));
+    }
 
     out += "\t)\n";
     out += "}\n";
 
-    out
+    ModelTransNames {
+        model: out,
+        transition_names: trans_names,
+    }
 }
 
-fn skill_running_to_failure(skillset: &Skillset, skill: &Skill, failure: &Failure) -> String {
+fn skill_running_to_failure(skillset: &Skillset, skill: &Skill, failure: &Failure, label: bool) -> ModelTransNames {
     let mut out = String::new();
+    let mut trans_names = vec![];
 
     out += &format!(
         "trans {}_{}_running_to_failure_{} {{\n",
@@ -233,6 +275,7 @@ fn skill_running_to_failure(skillset: &Skillset, skill: &Skill, failure: &Failur
         skill.name(),
         failure.name()
     );
+    trans_names.push(format!( "{}_{}_running_to_failure_{}", skillset.name(), skill.name(), failure.name()));
     out += &format!(
         "\t{} = Free and {} = Running\n",
         skillset_var(skillset),
@@ -244,7 +287,7 @@ fn skill_running_to_failure(skillset: &Skillset, skill: &Skill, failure: &Failur
     resources.extend(postconsitions_resources(failure.postconditions()));
 
     out += &format!(
-        "\tand |{}, {}|(\n",
+        "\tand |{}, {}",
         skillset_var(skillset),
         resources
             .iter()
@@ -254,6 +297,11 @@ fn skill_running_to_failure(skillset: &Skillset, skill: &Skill, failure: &Failur
                 acc, res
             ))
     );
+    if label {
+        out += &format!(", {}", &trans_label_variable())
+    }
+    out += "|(\n";
+    
     out += &format!(
         "\t\t{}' = Lock and {}' = Failure\n",
         skillset_var(skillset),
@@ -276,44 +324,70 @@ fn skill_running_to_failure(skillset: &Skillset, skill: &Skill, failure: &Failur
         out += &format!("\t\tand {}\n", next_expr_to_tatam(skillset, expr));
     }
 
+    if label {
+        out += &format!("\t\t\tand {}' = {}\n", &trans_label_variable(), &trans_label_enum_value(&format!( "{}_{}_running_to_failure_{}", skillset.name(), skill.name(), failure.name())));
+    }
+
     out += "\t)\n";
     out += "}\n";
 
-    out
+    ModelTransNames {
+        model: out,
+        transition_names: trans_names,
+    }
 }
 
-fn skill_running_to_interrupting(skillset: &Skillset, skill: &Skill) -> String {
+fn skill_running_to_interrupting(skillset: &Skillset, skill: &Skill, label: bool) -> ModelTransNames {
     let mut out = String::new();
+    let mut trans_names = vec![];
 
     out += &format!(
         "trans {}_{}_running_to_interrupting {{\n",
         skillset.name(),
         skill.name()
     );
+    trans_names.push(format!( "{}_{}_running_to_interrupting", skillset.name(), skill.name()));
     out += &format!(
         "\t{} = Free and {} = Running and false\n",// remove 'and false'
         skillset_var(skillset),
         skill_var(skillset, skill)
     );
     // Effect
-    out += &format!(
-        "\tand |{}|({}' = Interrupting)\n",
-        skill_var(skillset, skill),
-        skill_var(skillset, skill)
-    );
+    if label {
+        out += &format!(
+            "\tand |{}, {}|({}' = Interrupting and {}' = {})\n",
+            skill_var(skillset, skill),
+            &trans_label_variable(),
+            skill_var(skillset, skill),
+            &trans_label_variable(),
+            &trans_label_enum_value(&format!( "{}_{}_running_to_interrupting", skillset.name(), skill.name()))
+        );
+    } else {
+        out += &format!(
+            "\tand |{}|({}' = Interrupting)\n",
+            skill_var(skillset, skill),
+            skill_var(skillset, skill)
+        );
+    }
+    
     out += "}\n";
 
-    out
+    ModelTransNames {
+        model: out,
+        transition_names: trans_names,
+    }
 }
 
-fn skill_interrupting_to_interrupted(skillset: &Skillset, skill: &Skill) -> String {
+fn skill_interrupting_to_interrupted(skillset: &Skillset, skill: &Skill, label: bool) -> ModelTransNames {
     let mut out = String::new();
+    let mut trans_names = vec![];
 
     out += &format!(
         "trans {}_{}_interrupting_to_interrupted {{\n",
         skillset.name(),
         skill.name(),
     );
+    trans_names.push(format!( "{}_{}_interrupting_to_interrupted", skillset.name(), skill.name()));
     out += &format!(
         "\t{} = Free and {} = Interrupting\n",
         skillset_var(skillset),
@@ -336,7 +410,7 @@ fn skill_interrupting_to_interrupted(skillset: &Skillset, skill: &Skill) -> Stri
     resources.extend(postconsitions_resources(&postconditions));
 
     out += &format!(
-        "\tand |{}, {}|(\n",
+        "\tand |{}, {}",
         skillset_var(skillset),
         resources
             .iter()
@@ -346,6 +420,11 @@ fn skill_interrupting_to_interrupted(skillset: &Skillset, skill: &Skill) -> Stri
                 acc, res
             ))
     );
+    if label {
+        out += &format!(", {}", &trans_label_variable())
+    }
+    out += "|(\n";
+    
     out += &format!(
         "\t\t{}' = Lock and {}' = Interrupted\n",
         skillset_var(skillset),
@@ -368,8 +447,15 @@ fn skill_interrupting_to_interrupted(skillset: &Skillset, skill: &Skill) -> Stri
         out += &format!("\t\tand {}\n", next_expr_to_tatam(skillset, expr));
     }
 
+    if label {
+        out += &format!("\t\t\tand {}' = {}\n", &trans_label_variable(), &trans_label_enum_value(&format!( "{}_{}_interrupting_to_interrupted", skillset.name(), skill.name())));
+    }
+
     out += "\t)\n";
     out += "}\n";
 
-    out
+    ModelTransNames {
+        model: out,
+        transition_names: trans_names,
+    }
 }

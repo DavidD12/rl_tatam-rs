@@ -2,7 +2,7 @@ use super::*;
 use heck::ToSnakeCase;
 
 pub fn resources_to_tatam(skillset: &Skillset) -> String {
-    let mut out = "".to_string();
+    let mut out = String::new();
 
     out += "// ==================== Resouces ====================\n";
     for resource in skillset.resources() {
@@ -49,7 +49,7 @@ pub fn resources_to_tatam(skillset: &Skillset) -> String {
 }
 
 pub fn resource_to_tatam(skillset: &Skillset, resource: &Resource) -> String {
-    let mut out = "".to_string();
+    let mut out = String::new();
 
     // Enum
     out += &format!("\nenum {}: {{", resource_enum(skillset, resource));

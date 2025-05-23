@@ -1,7 +1,8 @@
 use super::*;
 
-pub fn skillset_to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>) -> String {
-    let mut out = "".to_string();
+pub fn skillset_to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>, label: bool) -> String {
+    let mut out = String::new();
+    let mut trans_names = vec![];
 
     out += "enum SkillsetState = { Free, Lock }\n";
     out += "enum SkillState = { Idle, Running, Interrupting, InvariantFailure, Success, Failure, Interrupted}\n";
@@ -21,23 +22,37 @@ pub fn skillset_to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String
     out += "}\n";
 
     // Invariant
-    out += &skillset_invariant_propagation(skillset, composite_skill_names);
+    let result = skillset_invariant_propagation(skillset, composite_skill_names, label);
+    out += &result.model;
+    trans_names.extend(result.transition_names);
 
     // Skills
     out += "\n// ==================== Skill ====================\n";
 
     for skill in skillset.skills().iter() {
-        out += &skill_to_tatam(skillset, skill, composite_skill_names);
+        let result = skill_to_tatam(skillset, skill, composite_skill_names, label);
+        out += &result.model;
+        trans_names.extend(result.transition_names);
     }
 
     if !composite_skill_names.is_empty() {
         out += &skill_interface_to_tatam(skillset, composite_skill_names);
     }
 
+    if label {
+        out += &format!("\nenum {} = {{ {}", &trans_label_enum_name(), &trans_label_enum_no_value());
+        for trans_name in &trans_names {
+            out += &format!(", {}", &trans_label_enum_value(&trans_name));
+        }
+        out += "}\n\n";
+        out += &format!("var {}: {}\n\n", &trans_label_variable(), &trans_label_enum_name());
+        out += &format!("init transition_label_init {{{} = {}}}\n", &trans_label_variable(), &trans_label_enum_no_value());
+    }
+
     out
 }
 
-fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &Vec<String>) -> String {
+fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &Vec<String>, label: bool) -> ModelTransNames {
     let invariants = skillset
         .skills()
         .iter()
@@ -45,9 +60,11 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
         .collect::<Vec<_>>();
 
     let mut out = String::new();
+    let mut trans_names = vec![];
 
     if let Some((first, others)) = invariants.split_first() {
         out += &format!("\ntrans {}_invariants_propagation {{\n", skillset.name());
+        trans_names.push(format!("{}_invariants_propagation", skillset.name()));
         out += &format!("\t{} = Lock and\n", skillset_var(skillset),);
         // first
         let skill = skillset.get(first.id().0).unwrap();
@@ -59,7 +76,7 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
             expr_to_tatam(skillset, guard)
         );
         out += &format!(
-            "\t\t|{}|(\n",
+            "\t\t|{}",
             effects_resources(first.effects())
                 .iter()
                 .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
@@ -67,7 +84,12 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
                     "{}, {}",
                     acc, res
                 ))
-        );
+            );
+        if label {
+            out += &format!(", {}", &trans_label_variable())
+        }
+        out += "|(\n";
+
         out += &format!("\t\t\t{}' = InvariantFailure\n", skill_var(skillset, skill),);
         for effect in first.effects().iter() {
             let resource = skillset.get(effect.resource().resolved()).unwrap();
@@ -76,6 +98,13 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
                 "\t\t\tand {}' = {}\n",
                 resource_var(skillset, resource),
                 resource_state(skillset, state)
+            );
+        }
+        if label {
+            out += &format!(
+                    "\t\t\tand {}' = {}\n",
+                    &trans_label_variable(),
+                    &trans_label_enum_value(&format!("{}_invariants_propagation", skillset.name()))
             );
         }
         out += "\t\t)\n";
@@ -90,7 +119,7 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
                 expr_to_tatam(skillset, guard)
             );
             out += &format!(
-                "\t\t|{}|(\n",
+                "\t\t|{}",
                 effects_resources(invariant.effects())
                     .iter()
                     .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
@@ -99,6 +128,11 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
                         acc, res
                     ))
             );
+            if label {
+                out += &format!(", {}", &trans_label_variable())
+            }
+            out += "|(\n";
+
             out += &format!("\t\t\t{}' = InvariantFailure\n", skill_var(skillset, skill),);
             for effect in invariant.effects().iter() {
                 let resource = skillset.get(effect.resource().resolved()).unwrap();
@@ -107,6 +141,13 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
                     "\t\t\tand {}' = {}\n",
                     resource_var(skillset, resource),
                     resource_state(skillset, state)
+                );
+            }
+            if label {
+                out += &format!(
+                    "\t\t\tand {}' = {}\n",
+                    &trans_label_variable(),
+                    &trans_label_enum_value(&format!("{}_invariants_propagation", skillset.name()))
                 );
             }
             out += "\t\t)\n"
@@ -128,6 +169,9 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
             for skill in skillset.skills() {
                 out += &format!(", {}, {}", &interface_var(skillset, skill, &comp_name), &interface_result_var(skillset, skill, &comp_name));
             }
+        }
+        if label {
+            out += &format!(", {}", &trans_label_variable());
         }
         out += "|(\n";
         for skill in skillset.skills().iter() {
@@ -158,9 +202,20 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
             out += "\t\t\tend and\n";
         }
         out += &format!("\t\t\t{}' = Free\n", skillset_var(skillset));
+        if label {
+            out += &format!(
+                "\t\t\tand {}' = {}\n",
+                &trans_label_variable(),
+                &trans_label_enum_value(&format!("{}_invariants_propagation", skillset.name()))
+            );
+        }
         out += "\t\t)\n";
         out += "\tend\n";
         out += "}\n";
     }
-    out
+
+    ModelTransNames {
+        model: out,
+        transition_names: trans_names,
+    }
 }

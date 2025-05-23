@@ -2,7 +2,7 @@ use super::*;
 use naming::*;
 
 pub fn events_to_tatam(skillset: &Skillset) -> String {
-    let mut out = "".to_string();
+    let mut out = String::new();
 
     out += "\n// ==================== Events ====================\n\n";
 
@@ -14,7 +14,7 @@ pub fn events_to_tatam(skillset: &Skillset) -> String {
 }
 
 pub fn event_to_tatam(skillset: &Skillset, event: &Event) -> String {
-    let mut out = "".to_string();
+    let mut out = String::new();
 
     out += &format!("trans {} {{\n", event_name(skillset, event));
     out += &format!("\t{} = Free and ", skillset_var(skillset),);
@@ -29,7 +29,7 @@ pub fn event_to_tatam(skillset: &Skillset, event: &Event) -> String {
         effects_resources(event.effects())
             .iter()
             .map(|id| resource_var(skillset, skillset.get(*id).unwrap()))
-            .fold("".to_string(), |acc, res| format!("{}, {}", acc, res))
+            .fold(String::new(), |acc, res| format!("{}, {}", acc, res))
     );
 
     out += &format!("\t\t{}' = Lock\n", skillset_var(skillset),);

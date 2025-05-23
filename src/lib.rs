@@ -26,10 +26,19 @@ pub use comp_skill_parser::*;
 pub mod skill_interface;
 pub use skill_interface::*;
 
-pub fn to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>) -> String {
-    let mut out = "".to_string();
 
-    out += &skillset_to_tatam(skillset, composite_skill_names);
+
+pub struct ModelTransNames {
+    pub model: String,
+    pub transition_names: Vec<String>,
+}
+
+
+
+pub fn to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>, label: bool) -> String {
+    let mut out = String::new();
+
+    out += &skillset_to_tatam(skillset, composite_skill_names, label);
 
     out += "\nprop = true\n";
     out += "\nsearch infinite + complete solve\n";

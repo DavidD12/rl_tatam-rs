@@ -5,6 +5,24 @@ pub fn string_string(first_string: &str, second_string: &str) -> String {
     format!("{}_{}", first_string, second_string)
 }
 
+
+
+// Transition labels
+pub fn trans_label_enum_name() -> String {
+    "Transition_Labels".to_string()
+}
+pub fn trans_label_enum_value(trans_name: &String) -> String {
+    format!("{}__Transition_Label", trans_name)
+}
+pub fn trans_label_enum_no_value() -> String {
+    format!("no_transition__Transition_Label")
+}
+pub fn trans_label_variable() -> String {
+    "transition_Label".to_string()
+}
+
+
+
 // Skillset
 
 pub fn skillset_var(skillset: &Skillset) -> String {

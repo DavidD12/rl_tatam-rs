@@ -12,7 +12,7 @@ license = "LGPL-3.0-only"
 clap = { version = "4.0.11", features = ["derive"] }
 env_logger = "0.8.4"
 heck = "0.4.1"
-rl_model-rs = "0.2.1"
+rl_model-rs = "0.2.2"
 
 [lib]
 name = "rl_tatam"

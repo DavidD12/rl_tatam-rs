@@ -10,6 +10,9 @@ struct Args {
     /// robot language file
     #[arg(short, long)]
     file: String,
+    /// transition labeling
+    #[arg(short, long)]
+    label: bool,
     /// composite skill name file
     #[arg(short, long, default_value_t = String::new())]
     composite: String,
@@ -28,16 +31,12 @@ fn main() {
     }
     //
     if let Ok(skillset) = load_skillset(&args.file) {
-        if args.verbose >= 3 {
-            println!("\n--------------------------------------------------\n");
-            println!("{}", skillset);
-        }
         if args.verbose >= 2 {
             println!("\n--------------------------------------------------\n");
             println!("{}", skillset);
         }
 
-        let tatam = to_tatam(&skillset, &lines_from_file(&args.composite));
+        let tatam = to_tatam(&skillset, &lines_from_file(&args.composite), args.label);
         println!("{}", tatam);
     }
 }
