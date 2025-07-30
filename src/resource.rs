@@ -9,9 +9,9 @@ pub fn resources_to_tatam(skillset: &Skillset) -> String {
         // Enum
         out += &format!("\nenum {} = {{ ", resource_enum(skillset, resource));
         if let Some((first, others)) = resource.states().split_first() {
-            out += &resource_state(skillset, first);
+            out += &resource_state(skillset, resource, first);
             for state in others {
-                out += &format!(", {}", resource_state(skillset, state));
+                out += &format!(", {}", resource_state(skillset, resource, state));
             }
         }
         out += " }\n";
@@ -32,14 +32,14 @@ pub fn resources_to_tatam(skillset: &Skillset) -> String {
         out += &format!(
             "  {} = {}",
             resource_var(skillset, first),
-            resource_state(skillset, state)
+            resource_state(skillset, first, state)
         );
         for resource in others {
             let state = skillset.get(resource.initial()).unwrap();
             out += &format!(
                 " and {} = {}",
                 resource_var(skillset, resource),
-                resource_state(skillset, state)
+                resource_state(skillset, resource, state)
             );
         }
         out += "\n}\n";
@@ -54,9 +54,9 @@ pub fn resource_to_tatam(skillset: &Skillset, resource: &Resource) -> String {
     // Enum
     out += &format!("\nenum {}: {{", resource_enum(skillset, resource));
     if let Some((first, others)) = resource.states().split_first() {
-        out += &resource_state(skillset, first);
+        out += &resource_state(skillset, resource, first);
         for state in others {
-            out += &format!(", {}", resource_state(skillset, state));
+            out += &format!(", {}", resource_state(skillset, resource, state));
         }
     }
     out += "}\n";

@@ -145,7 +145,11 @@ fn skill_idle_to_running(skillset: &Skillset, skill: &Skill, compo_name: &String
                 skillset,
                 skillset.get(effect.resource().resolved()).unwrap()
             ),
-            resource_state(skillset, skillset.get(effect.state().resolved()).unwrap())
+            resource_state(
+                skillset,
+                skillset.get(effect.resource().resolved()).unwrap(),
+                skillset.get(effect.state().resolved()).unwrap()
+            )
         );
     }
     if !compo_name.is_empty() {
@@ -244,7 +248,11 @@ fn skill_running_to_success(skillset: &Skillset, skill: &Skill, success: &Succes
                 skillset,
                 skillset.get(effect.resource().resolved()).unwrap()
             ),
-            resource_state(skillset, skillset.get(effect.state().resolved()).unwrap())
+            resource_state(
+                skillset,
+                skillset.get(effect.resource().resolved()).unwrap(),
+                skillset.get(effect.state().resolved()).unwrap()
+            )
         );
     }
     // Postconditions
@@ -315,7 +323,11 @@ fn skill_running_to_failure(skillset: &Skillset, skill: &Skill, failure: &Failur
                 skillset,
                 skillset.get(effect.resource().resolved()).unwrap()
             ),
-            resource_state(skillset, skillset.get(effect.state().resolved()).unwrap())
+            resource_state(
+                skillset,
+                skillset.get(effect.resource().resolved()).unwrap(),
+                skillset.get(effect.state().resolved()).unwrap()
+            )
         );
     }
     // Postconditions
@@ -438,7 +450,11 @@ fn skill_interrupting_to_interrupted(skillset: &Skillset, skill: &Skill, label: 
                 skillset,
                 skillset.get(effect.resource().resolved()).unwrap()
             ),
-            resource_state(skillset, skillset.get(effect.state().resolved()).unwrap())
+            resource_state(
+                skillset,
+                skillset.get(effect.resource().resolved()).unwrap(),
+                skillset.get(effect.state().resolved()).unwrap()
+            )
         );
     }
     // Postconditions

@@ -82,10 +82,13 @@ pub fn resource_enum(skillset: &Skillset, resource: &Resource) -> String {
     )
 }
 
-pub fn resource_state(skillset: &Skillset, state: &State) -> String {
+pub fn resource_state(skillset: &Skillset, resource: &Resource, state: &State) -> String {
     string_string(
-        &skillset.name().to_upper_camel_case(),
-        &state.name().to_upper_camel_case(),
+        &string_string(
+            &skillset.name().to_upper_camel_case(),
+            &resource.name().to_snake_case()
+        ),
+        &state.name().to_upper_camel_case()
     )
 }
 

@@ -14,7 +14,7 @@ pub fn expr_to_tatam(skillset: &Skillset, expr: &Expr) -> String {
             format!(
                 "({} = {})",
                 resource_var(skillset, resource),
-                resource_state(skillset, state)
+                resource_state(skillset, resource, state)
             )
         }
         Expr::ResourceNe(id, state) => {
@@ -23,7 +23,7 @@ pub fn expr_to_tatam(skillset: &Skillset, expr: &Expr) -> String {
             format!(
                 "({} != {})",
                 resource_var(skillset, resource),
-                resource_state(skillset, state)
+                resource_state(skillset, resource, state)
             )
         }
         Expr::Not(e) => format!("(not {})", expr_to_tatam(skillset, e)),
@@ -55,7 +55,7 @@ pub fn next_expr_to_tatam(skillset: &Skillset, expr: &Expr) -> String {
             format!(
                 "({}' = {})",
                 resource_var(skillset, resource),
-                resource_state(skillset, state)
+                resource_state(skillset, resource, state)
             )
         }
         Expr::ResourceNe(id, state) => {
@@ -64,7 +64,7 @@ pub fn next_expr_to_tatam(skillset: &Skillset, expr: &Expr) -> String {
             format!(
                 "({}' != {})",
                 resource_var(skillset, resource),
-                resource_state(skillset, state)
+                resource_state(skillset, resource, state)
             )
         }
         Expr::Not(e) => format!("(not {})", next_expr_to_tatam(skillset, e)),

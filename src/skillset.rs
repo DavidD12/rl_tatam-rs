@@ -97,7 +97,7 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
             out += &format!(
                 "\t\t\tand {}' = {}\n",
                 resource_var(skillset, resource),
-                resource_state(skillset, state)
+                resource_state(skillset, resource, state)
             );
         }
         if label {
@@ -140,7 +140,7 @@ fn skillset_invariant_propagation(skillset: &Skillset, composite_skill_names: &V
                 out += &format!(
                     "\t\t\tand {}' = {}\n",
                     resource_var(skillset, resource),
-                    resource_state(skillset, state)
+                    resource_state(skillset, resource, state)
                 );
             }
             if label {

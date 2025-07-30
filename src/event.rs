@@ -39,7 +39,7 @@ pub fn event_to_tatam(skillset: &Skillset, event: &Event) -> String {
         out += &format!(
             "\t\tand {}' = {}\n",
             resource_var(skillset, resource),
-            resource_state(skillset, state)
+            resource_state(skillset, resource, state)
         );
     }
 
