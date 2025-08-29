@@ -1,0 +1,585 @@
+enum SkillsetState = { Free, Lock }
+enum SkillState = { Idle, Running, Interrupting, InvariantFailure, Success, Failure, Interrupted}
+enum SkillInterfaceState = { NoCall, AsynCall, WaitResult }
+enum SkillCallResults = { NoneRes, SuccessRes, FailureRes, InvaFailRes, InterruptionRes, StartFailureRes, SkillBusyRes }
+enum CompositeResults = { NoneCo, SuccessCo, FailureCo }
+enum Sequence1State = { IdleSeq1, Starting1, Goto11, Recharge1, Goto12 }
+enum Sequence2State = { IdleSeq2, Starting2, Goto21, Goto22 }
+
+
+
+
+
+// ==================== Data ====================
+
+var blevel: Int
+var d: Int
+var seq_1_d: Int
+var seq_1_start: Bool
+var seq_2_d: Int
+var seq_2_start: Bool
+cst en_cons: Int
+cst fully_charged: Int
+cst seq_1_d_1: Int
+cst seq_1_d_2: Int
+cst seq_2_d_1: Int
+cst seq_2_d_2: Int
+
+
+init init_custom_robot_data {
+  fully_charged = 10 and blevel = 10 and en_cons = 2 and d = 0 and seq_1_d = 0 and seq_2_d = 0
+  and seq_1_start = true and seq_2_start = false
+
+// sequence 1 parameters
+  and seq_1_d_1 = 5 and seq_1_d_2 = 1
+//   and seq_1_d_1 = 5 and seq_1_d_2 = 5
+//   and seq_1_d_1 = 0 and seq_1_d_2 = 5
+//   and seq_1_d_1 = 5 and seq_1_d_2 = 10
+//   and seq_1_d_1 = 5 and seq_1_d_2 = 6
+//   and seq_1_d_1 = 6 and seq_1_d_2 = 1
+//   and seq_1_d_1 = 6 and seq_1_d_2 = 0
+//   and seq_1_d_1 = 6 and seq_1_d_2 = 10
+
+// sequence 2 parameters
+ and seq_2_d_1 = 1 and seq_2_d_2 = 1
+// and seq_2_d_1 = 2 and seq_2_d_2 = 3
+// and seq_2_d_1 = 2 and seq_2_d_2 = 4
+// and seq_2_d_1 = 0 and seq_2_d_2 = 5
+// and seq_2_d_1 = 1 and seq_2_d_2 = 0
+// and seq_2_d_1 = 6 and seq_2_d_2 = 0
+}
+
+
+
+
+
+// ==================== Resouces ====================
+
+enum CustomRobot_Motion = { CustomRobot_On, CustomRobot_Off }
+var custom_robot_motion: CustomRobot_Motion
+
+init init_custom_robot_resources {
+  custom_robot_motion = CustomRobot_Off
+}
+// ==================== Skillset ====================
+var custom_robot_state: SkillsetState
+
+init init_custom_robot {
+	custom_robot_state = Free
+}
+
+trans custom_robot_invariants_propagation {
+	custom_robot_state = Lock and
+	if custom_robot_goto_state = Running and not (custom_robot_motion = CustomRobot_On) then
+		|custom_robot_goto_state|(
+			custom_robot_goto_state' = InvariantFailure
+		)
+	elif custom_robot_recharge_state = Running and not (custom_robot_motion = CustomRobot_Off) then
+		|custom_robot_recharge_state|(
+			custom_robot_recharge_state' = InvariantFailure
+		)
+	else
+		|custom_robot_state, custom_robot_goto_state, custom_robot_recharge_state, sequence_1_custom_robot_goto_interface_state, sequence_1_custom_robot_goto_result, sequence_1_custom_robot_recharge_interface_state, sequence_1_custom_robot_recharge_result, sequence_2_custom_robot_goto_interface_state, sequence_2_custom_robot_goto_result, sequence_2_custom_robot_recharge_interface_state, sequence_2_custom_robot_recharge_result|(
+			if custom_robot_goto_state = InvariantFailure or custom_robot_goto_state = Success or custom_robot_goto_state = Failure or custom_robot_goto_state = Interrupted then
+				custom_robot_goto_state' = Idle
+				and if sequence_1_custom_robot_goto_interface_state = WaitResult then
+					sequence_1_custom_robot_goto_interface_state' = NoCall and
+					if custom_robot_goto_state = InvariantFailure then
+						sequence_1_custom_robot_goto_result' = InvaFailRes
+					elif custom_robot_goto_state = Success then
+						sequence_1_custom_robot_goto_result' = SuccessRes
+					elif custom_robot_goto_state = Failure then
+						sequence_1_custom_robot_goto_result' = FailureRes
+					elif custom_robot_goto_state = Interrupted then
+						sequence_1_custom_robot_goto_result' = InterruptionRes
+					else
+						sequence_1_custom_robot_goto_result' = NoneRes
+					end
+				else
+					sequence_1_custom_robot_goto_interface_state' = sequence_1_custom_robot_goto_interface_state and sequence_1_custom_robot_goto_result' = sequence_1_custom_robot_goto_result
+				end
+				and if sequence_2_custom_robot_goto_interface_state = WaitResult then
+					sequence_2_custom_robot_goto_interface_state' = NoCall and
+					if custom_robot_goto_state = InvariantFailure then
+						sequence_2_custom_robot_goto_result' = InvaFailRes
+					elif custom_robot_goto_state = Success then
+						sequence_2_custom_robot_goto_result' = SuccessRes
+					elif custom_robot_goto_state = Failure then
+						sequence_2_custom_robot_goto_result' = FailureRes
+					elif custom_robot_goto_state = Interrupted then
+						sequence_2_custom_robot_goto_result' = InterruptionRes
+					else
+						sequence_2_custom_robot_goto_result' = NoneRes
+					end
+				else
+					sequence_2_custom_robot_goto_interface_state' = sequence_2_custom_robot_goto_interface_state and sequence_2_custom_robot_goto_result' = sequence_2_custom_robot_goto_result
+				end
+			else
+				custom_robot_goto_state' = custom_robot_goto_state
+				and sequence_1_custom_robot_goto_interface_state' = sequence_1_custom_robot_goto_interface_state and sequence_1_custom_robot_goto_result' = sequence_1_custom_robot_goto_result
+				and sequence_2_custom_robot_goto_interface_state' = sequence_2_custom_robot_goto_interface_state and sequence_2_custom_robot_goto_result' = sequence_2_custom_robot_goto_result
+			end and
+			if custom_robot_recharge_state = InvariantFailure or custom_robot_recharge_state = Success or custom_robot_recharge_state = Failure or custom_robot_recharge_state = Interrupted then
+				custom_robot_recharge_state' = Idle
+				and if sequence_1_custom_robot_recharge_interface_state = WaitResult then
+					sequence_1_custom_robot_recharge_interface_state' = NoCall and
+					if custom_robot_recharge_state = InvariantFailure then
+						sequence_1_custom_robot_recharge_result' = InvaFailRes
+					elif custom_robot_recharge_state = Success then
+						sequence_1_custom_robot_recharge_result' = SuccessRes
+					elif custom_robot_recharge_state = Failure then
+						sequence_1_custom_robot_recharge_result' = FailureRes
+					elif custom_robot_recharge_state = Interrupted then
+						sequence_1_custom_robot_recharge_result' = InterruptionRes
+					else
+						sequence_1_custom_robot_recharge_result' = NoneRes
+					end
+				else
+					sequence_1_custom_robot_recharge_interface_state' = sequence_1_custom_robot_recharge_interface_state and sequence_1_custom_robot_recharge_result' = sequence_1_custom_robot_recharge_result
+				end
+				and if sequence_2_custom_robot_recharge_interface_state = WaitResult then
+					sequence_2_custom_robot_recharge_interface_state' = NoCall and
+					if custom_robot_recharge_state = InvariantFailure then
+						sequence_2_custom_robot_recharge_result' = InvaFailRes
+					elif custom_robot_recharge_state = Success then
+						sequence_2_custom_robot_recharge_result' = SuccessRes
+					elif custom_robot_recharge_state = Failure then
+						sequence_2_custom_robot_recharge_result' = FailureRes
+					elif custom_robot_recharge_state = Interrupted then
+						sequence_2_custom_robot_recharge_result' = InterruptionRes
+					else
+						sequence_2_custom_robot_recharge_result' = NoneRes
+					end
+				else
+					sequence_2_custom_robot_recharge_interface_state' = sequence_2_custom_robot_recharge_interface_state and sequence_2_custom_robot_recharge_result' = sequence_2_custom_robot_recharge_result
+				end
+			else
+				custom_robot_recharge_state' = custom_robot_recharge_state
+				and sequence_1_custom_robot_recharge_interface_state' = sequence_1_custom_robot_recharge_interface_state and sequence_1_custom_robot_recharge_result' = sequence_1_custom_robot_recharge_result
+				and sequence_2_custom_robot_recharge_interface_state' = sequence_2_custom_robot_recharge_interface_state and sequence_2_custom_robot_recharge_result' = sequence_2_custom_robot_recharge_result
+			end and
+			custom_robot_state' = Free
+		)
+	end
+}
+
+// ==================== Skill ====================
+
+// -------------------- Skill goto --------------------
+
+var custom_robot_goto_state: SkillState
+
+init custom_robot_goto {
+	custom_robot_goto_state = Idle
+}
+
+
+trans sequence_1_custom_robot_goto_idle_to_idle_precond_false {
+	custom_robot_state = Free and custom_robot_goto_state = Idle
+	and not ( (custom_robot_motion = CustomRobot_Off) and seq_1_d > 0 and blevel >= en_cons )
+	and sequence_1_custom_robot_goto_interface_state = AsynCall
+	and |sequence_1_custom_robot_goto_interface_state, sequence_1_custom_robot_goto_result|(
+		sequence_1_custom_robot_goto_interface_state' = NoCall and sequence_1_custom_robot_goto_result' = StartFailureRes
+	)
+}
+trans sequence_1_custom_robot_goto_idle_to_running {
+	custom_robot_state = Free and custom_robot_goto_state = Idle
+	and (custom_robot_motion = CustomRobot_Off)
+	and seq_1_d > 0 and blevel >= en_cons
+	and sequence_1_custom_robot_goto_interface_state = AsynCall
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion, sequence_1_custom_robot_goto_interface_state, d|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Running
+		and custom_robot_motion' = CustomRobot_On
+		and sequence_1_custom_robot_goto_interface_state' = WaitResult
+		and d' = seq_1_d
+	)
+}
+trans sequence_1_custom_robot_goto_running_to_running_busy {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and sequence_1_custom_robot_goto_interface_state = AsynCall
+	and |sequence_1_custom_robot_goto_interface_state, sequence_1_custom_robot_goto_result|(
+		sequence_1_custom_robot_goto_interface_state' = NoCall and sequence_1_custom_robot_goto_result' = SkillBusyRes
+	)
+}
+
+
+trans sequence_2_custom_robot_goto_idle_to_idle_precond_false {
+	custom_robot_state = Free and custom_robot_goto_state = Idle
+	and not ( (custom_robot_motion = CustomRobot_Off) and seq_2_d > 0 and blevel >= en_cons )
+	and sequence_2_custom_robot_goto_interface_state = AsynCall
+	and |sequence_2_custom_robot_goto_interface_state, sequence_2_custom_robot_goto_result|(
+		sequence_2_custom_robot_goto_interface_state' = NoCall and sequence_2_custom_robot_goto_result' = StartFailureRes
+	)
+}
+trans sequence_2_custom_robot_goto_idle_to_running {
+	custom_robot_state = Free and custom_robot_goto_state = Idle
+	and (custom_robot_motion = CustomRobot_Off)
+	and seq_2_d > 0 and blevel >= en_cons
+	and sequence_2_custom_robot_goto_interface_state = AsynCall
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion, sequence_2_custom_robot_goto_interface_state, d|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Running
+		and custom_robot_motion' = CustomRobot_On
+		and sequence_2_custom_robot_goto_interface_state' = WaitResult
+		and d' = seq_2_d
+	)
+}
+trans sequence_2_custom_robot_goto_running_to_running_busy {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and sequence_2_custom_robot_goto_interface_state = AsynCall
+	and |sequence_2_custom_robot_goto_interface_state, sequence_2_custom_robot_goto_result|(
+		sequence_2_custom_robot_goto_interface_state' = NoCall and sequence_2_custom_robot_goto_result' = SkillBusyRes
+	)
+}
+
+
+trans custom_robot_goto_running_to_running {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and d > 0 and blevel >= en_cons
+	and |d, blevel|(
+		d' = d - 1
+		and blevel' = blevel - en_cons
+	)
+}
+
+trans custom_robot_goto_running_to_success_arrived {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and d <= 0
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Success
+		and custom_robot_motion' = CustomRobot_Off
+	)
+}
+trans custom_robot_goto_running_to_failure_blocked {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and d > 0 and blevel < en_cons
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Failure
+		and custom_robot_motion' = CustomRobot_Off
+	)
+}
+trans custom_robot_goto_running_to_interrupting {
+	custom_robot_state = Free and custom_robot_goto_state = Running and false
+	and |custom_robot_goto_state|(custom_robot_goto_state' = Interrupting)
+}
+trans custom_robot_goto_interrupting_to_interrupted {
+	custom_robot_state = Free and custom_robot_goto_state = Interrupting
+	and |custom_robot_state, custom_robot_goto_state|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Interrupted
+	)
+}
+
+// -------------------- Skill recharge --------------------
+
+var custom_robot_recharge_state: SkillState
+
+init custom_robot_recharge {
+	custom_robot_recharge_state = Idle
+}
+trans sequence_1_custom_robot_recharge_idle_to_idle_precond_false {
+	custom_robot_state = Free and custom_robot_recharge_state = Idle
+	and not ( (custom_robot_motion = CustomRobot_Off) and blevel < fully_charged )
+	and sequence_1_custom_robot_recharge_interface_state = AsynCall
+	and |sequence_1_custom_robot_recharge_interface_state, sequence_1_custom_robot_recharge_result|(
+		sequence_1_custom_robot_recharge_interface_state' = NoCall and sequence_1_custom_robot_recharge_result' = StartFailureRes
+	)
+}
+trans sequence_1_custom_robot_recharge_idle_to_running {
+	custom_robot_state = Free and custom_robot_recharge_state = Idle
+	and (custom_robot_motion = CustomRobot_Off)
+	and blevel < fully_charged
+	and sequence_1_custom_robot_recharge_interface_state = AsynCall
+	and |custom_robot_state, custom_robot_recharge_state, sequence_1_custom_robot_recharge_interface_state|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Running
+		and sequence_1_custom_robot_recharge_interface_state' = WaitResult
+	)
+}
+trans sequence_1_custom_robot_recharge_running_to_running_busy {
+	custom_robot_state = Free and custom_robot_recharge_state = Running
+	and sequence_1_custom_robot_recharge_interface_state = AsynCall
+	and |sequence_1_custom_robot_recharge_interface_state, sequence_1_custom_robot_recharge_result|(
+		sequence_1_custom_robot_recharge_interface_state' = NoCall and sequence_1_custom_robot_recharge_result' = SkillBusyRes
+	)
+}
+
+
+
+trans sequence_2_custom_robot_recharge_idle_to_idle_precond_false {
+	custom_robot_state = Free and custom_robot_recharge_state = Idle
+	and not ( (custom_robot_motion = CustomRobot_Off) and blevel < fully_charged )
+	and sequence_2_custom_robot_recharge_interface_state = AsynCall
+	and |sequence_2_custom_robot_recharge_interface_state, sequence_2_custom_robot_recharge_result|(
+		sequence_2_custom_robot_recharge_interface_state' = NoCall and sequence_2_custom_robot_recharge_result' = StartFailureRes
+	)
+}
+trans sequence_2_custom_robot_recharge_idle_to_running {
+	custom_robot_state = Free and custom_robot_recharge_state = Idle
+	and (custom_robot_motion = CustomRobot_Off)
+	and blevel < fully_charged
+	and sequence_2_custom_robot_recharge_interface_state = AsynCall
+	and |custom_robot_state, custom_robot_recharge_state, sequence_2_custom_robot_recharge_interface_state|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Running
+		and sequence_2_custom_robot_recharge_interface_state' = WaitResult
+	)
+}
+trans sequence_2_custom_robot_recharge_running_to_running_busy {
+	custom_robot_state = Free and custom_robot_recharge_state = Running
+	and sequence_2_custom_robot_recharge_interface_state = AsynCall
+	and |sequence_2_custom_robot_recharge_interface_state, sequence_2_custom_robot_recharge_result|(
+		sequence_2_custom_robot_recharge_interface_state' = NoCall and sequence_2_custom_robot_recharge_result' = SkillBusyRes
+	)
+}
+
+
+
+
+trans custom_robot_recharge_running_to_running {
+	custom_robot_state = Free and custom_robot_recharge_state = Running
+	and blevel < fully_charged
+	and |blevel|(
+		blevel' = fully_charged
+	)
+}
+
+trans custom_robot_recharge_running_to_success_charged {
+	custom_robot_state = Free and custom_robot_recharge_state = Running
+	and blevel >= fully_charged
+	and |custom_robot_state, custom_robot_recharge_state|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Success
+	)
+}
+
+trans custom_robot_recharge_running_to_interrupting {
+	custom_robot_state = Free and custom_robot_recharge_state = Running and false
+	and |custom_robot_recharge_state|(custom_robot_recharge_state' = Interrupting)
+}
+trans custom_robot_recharge_interrupting_to_interrupted {
+	custom_robot_state = Free and custom_robot_recharge_state = Interrupting
+	and |custom_robot_state, custom_robot_recharge_state|(
+		custom_robot_state' = Lock and custom_robot_recharge_state' = Interrupted
+	)
+}
+
+// -------------------- Skill Interface --------------------
+
+var sequence_1_custom_robot_goto_interface_state: SkillInterfaceState
+var sequence_1_custom_robot_goto_result: SkillCallResults
+
+var sequence_1_custom_robot_recharge_interface_state: SkillInterfaceState
+var sequence_1_custom_robot_recharge_result: SkillCallResults
+
+var sequence_2_custom_robot_goto_interface_state: SkillInterfaceState
+var sequence_2_custom_robot_goto_result: SkillCallResults
+
+var sequence_2_custom_robot_recharge_interface_state: SkillInterfaceState
+var sequence_2_custom_robot_recharge_result: SkillCallResults
+
+init init_custom_robot_skill_interface {
+	sequence_1_custom_robot_goto_interface_state = NoCall
+	and sequence_1_custom_robot_goto_result = NoneRes and
+	sequence_1_custom_robot_recharge_interface_state = NoCall
+	and sequence_1_custom_robot_recharge_result = NoneRes and
+	sequence_2_custom_robot_goto_interface_state = NoCall
+	and sequence_2_custom_robot_goto_result = NoneRes and
+	sequence_2_custom_robot_recharge_interface_state = NoCall
+	and sequence_2_custom_robot_recharge_result = NoneRes
+}
+
+
+
+
+
+// ==================== Composite skills ====================
+
+
+// -------------------- Sequence 1 --------------------
+
+var sequence_1_state: Sequence1State
+var sequence_1_result: CompositeResults
+
+init init_sequence_1 {
+	sequence_1_state = IdleSeq1
+	and sequence_1_result = NoneCo
+}
+
+trans sequence_1_idle_to_starting {
+	sequence_1_state = IdleSeq1
+	and seq_1_start
+	and |sequence_1_state, sequence_1_result, seq_1_start|(
+		sequence_1_state' = Starting1
+		and sequence_1_result' = NoneCo
+		and seq_1_start' = false
+	)
+}
+
+trans sequence_1_starting_to_goto1 {
+	sequence_1_state = Starting1
+	and sequence_1_custom_robot_goto_interface_state = NoCall
+	and |sequence_1_state, sequence_1_custom_robot_goto_interface_state, seq_1_d, sequence_1_custom_robot_goto_result|(
+		sequence_1_state' = Goto11
+		and sequence_1_custom_robot_goto_interface_state' = AsynCall
+		and seq_1_d' = seq_1_d_1
+		and sequence_1_custom_robot_goto_result' = NoneRes
+	)
+}
+
+trans sequence_1_goto1_to_idle_result_fail {
+	sequence_1_state = Goto11
+	and sequence_1_custom_robot_goto_result != NoneRes and sequence_1_custom_robot_goto_result != SuccessRes
+	and |sequence_1_state, sequence_1_result|(
+		sequence_1_state' = IdleSeq1
+		and sequence_1_result' = FailureCo
+	)
+}
+trans sequence_1_goto1_to_recharge {
+	sequence_1_state = Goto11
+	and sequence_1_custom_robot_goto_result = SuccessRes
+	and sequence_1_custom_robot_recharge_interface_state = NoCall
+	and |sequence_1_state, sequence_1_custom_robot_recharge_interface_state, sequence_1_custom_robot_recharge_result|(
+		sequence_1_state' = Recharge1
+		and sequence_1_custom_robot_recharge_interface_state' = AsynCall
+		and sequence_1_custom_robot_recharge_result' = NoneRes
+	)
+}
+
+trans sequence_1_recharge_to_idle_result_fail {
+	sequence_1_state = Recharge1
+	and sequence_1_custom_robot_recharge_result != NoneRes and sequence_1_custom_robot_recharge_result != SuccessRes
+	and |sequence_1_state, sequence_1_result|(
+		sequence_1_state' = IdleSeq1
+		and sequence_1_result' = FailureCo
+	)
+}
+trans sequence_1_recharge_to_goto2 {
+	sequence_1_state = Recharge1
+	and sequence_1_custom_robot_recharge_result = SuccessRes
+	and sequence_1_custom_robot_goto_interface_state = NoCall
+	and |sequence_1_state, sequence_1_custom_robot_goto_interface_state, seq_1_d, sequence_1_custom_robot_goto_result|(
+		sequence_1_state' = Goto12
+		and sequence_1_custom_robot_goto_interface_state' = AsynCall
+		and seq_1_d' = seq_1_d_2
+		and sequence_1_custom_robot_goto_result' = NoneRes
+	)
+}
+
+trans sequence_1_goto2_to_idle_result_fail {
+	sequence_1_state = Goto12
+	and sequence_1_custom_robot_goto_result != NoneRes and sequence_1_custom_robot_goto_result != SuccessRes
+	and |sequence_1_state, sequence_1_result|(
+		sequence_1_state' = IdleSeq1
+		and sequence_1_result' = FailureCo
+	)
+}
+trans sequence_1_goto2_to_idle {
+	sequence_1_state = Goto12
+	and sequence_1_custom_robot_goto_result = SuccessRes
+	and |sequence_1_state, sequence_1_result|(
+		sequence_1_state' = IdleSeq1
+		and sequence_1_result' = SuccessCo
+	)
+}
+
+
+
+
+
+
+
+
+// -------------------- Sequence 2 --------------------
+
+var sequence_2_state: Sequence2State
+var sequence_2_result: CompositeResults
+
+init init_sequence_2 {
+	sequence_2_state = IdleSeq2
+	and sequence_2_result = NoneCo
+}
+
+trans sequence_2_idle_to_starting {
+	sequence_2_state = IdleSeq2
+	and seq_2_start
+	and |sequence_2_state, sequence_2_result, seq_2_start|(
+		sequence_2_state' = Starting2
+		and sequence_2_result' = NoneCo
+		and seq_2_start' = false
+	)
+}
+
+trans sequence_2_starting_to_goto1 {
+	sequence_2_state = Starting2
+	and sequence_2_custom_robot_goto_interface_state = NoCall
+	and |sequence_2_state, sequence_2_custom_robot_goto_interface_state, seq_2_d, sequence_2_custom_robot_goto_result|(
+		sequence_2_state' = Goto21
+		and sequence_2_custom_robot_goto_interface_state' = AsynCall
+		and seq_2_d' = seq_2_d_1
+		and sequence_2_custom_robot_goto_result' = NoneRes
+	)
+}
+
+trans sequence_2_goto1_to_idle_result_fail {
+	sequence_2_state = Goto21
+	and sequence_2_custom_robot_goto_result != NoneRes and sequence_2_custom_robot_goto_result != SuccessRes
+	and |sequence_2_state, sequence_2_result|(
+		sequence_2_state' = IdleSeq2
+		and sequence_2_result' = FailureCo
+	)
+}
+trans sequence_2_goto1_to_goto2 {
+	sequence_2_state = Goto21
+	and sequence_2_custom_robot_goto_result = SuccessRes
+	and sequence_2_custom_robot_goto_interface_state = NoCall
+	and |sequence_2_state, sequence_2_custom_robot_goto_interface_state, seq_2_d, sequence_2_custom_robot_goto_result|(
+		sequence_2_state' = Goto22
+		and sequence_2_custom_robot_goto_interface_state' = AsynCall
+		and seq_2_d' = seq_2_d_2
+		and sequence_2_custom_robot_goto_result' = NoneRes
+	)
+}
+
+trans sequence_2_goto2_to_idle_result_fail {
+	sequence_2_state = Goto22
+	and sequence_2_custom_robot_goto_result != NoneRes and sequence_2_custom_robot_goto_result != SuccessRes
+	and |sequence_2_state, sequence_2_result|(
+		sequence_2_state' = IdleSeq2
+		and sequence_2_result' = FailureCo
+	)
+}
+trans sequence_2_goto2_to_idle {
+	sequence_2_state = Goto22
+	and sequence_2_custom_robot_goto_result = SuccessRes
+	and |sequence_2_state, sequence_2_result|(
+		sequence_2_state' = IdleSeq2
+		and sequence_2_result' = SuccessCo
+	)
+}
+
+
+
+
+// test séquence 1
+// seq_1_d_1 = 5 and seq_1_d_2 = 1	: SAT
+// seq_1_d_1 = 5 and seq_1_d_2 = 5	: SAT
+// seq_1_d_1 = 0 and seq_1_d_2 = 5	: UNSAT k=5
+// seq_1_d_1 = 5 and seq_1_d_2 = 10	: UNSAT k=29
+// seq_1_d_1 = 5 and seq_1_d_2 = 6	: UNSAT k=29
+// seq_1_d_1 = 6 and seq_1_d_2 = 1	: UNSAT k=13
+// seq_1_d_1 = 6 and seq_1_d_2 = 0	: UNSAT k=13
+// seq_1_d_1 = 6 and seq_1_d_2 = 10	: UNSAT k=13
+
+prop = F (sequence_1_result = SuccessCo)
+
+// test séquence 2
+// seq_2_d_1 = 1 and seq_2_d_2 = 1 : SAT
+// seq_2_d_1 = 2 and seq_2_d_2 = 3 : SAT
+// seq_2_d_1 = 2 and seq_2_d_2 = 4 : UNSAT k=18
+// seq_2_d_1 = 0 and seq_2_d_2 = 5 : UNSAT k=5
+// seq_2_d_1 = 1 and seq_2_d_2 = 0 : UNSAT k=11
+// seq_2_d_1 = 6 and seq_2_d_2 = 0 : UNSAT k=13
+
+//prop = F (sequence_2_result = SuccessCo)
+
+
+// prop = true
+
+search finite + complete solve
+

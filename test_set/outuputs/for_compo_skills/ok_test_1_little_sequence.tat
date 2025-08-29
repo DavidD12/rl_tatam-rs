@@ -1,0 +1,273 @@
+enum SkillsetState = { Free, Lock }
+enum SkillState = { Idle, Running, Interrupting, InvariantFailure, Success, Failure, Interrupted}
+enum SkillInterfaceState = { NoCall, AsynCall, WaitResult }
+enum SkillCallResults = { NoneRes, SuccessRes, FailureRes, InvaFailRes, InterruptionRes, StartFailureRes, SkillBusyRes }
+enum Sequence0State = { IdleSeq0, Starting0, Goto0 }
+enum CompositeResults = { NoneCo, SuccessCo, FailureCo }
+// ==================== Resouces ====================
+
+enum CustomRobot_Motion = { CustomRobot_On, CustomRobot_Off }
+var custom_robot_motion: CustomRobot_Motion
+
+init init_custom_robot_resources {
+  custom_robot_motion = CustomRobot_Off
+}
+
+// ==================== Data ====================
+
+var blevel: Int
+var d: Int
+var seq_0_d: Int
+var seq_0_start: Bool
+cst en_cons: Int
+cst fully_charged: Int
+cst seq_0_d_1: Int
+
+
+// ==================== Skillset ====================
+var custom_robot_state: SkillsetState
+
+init init_custom_robot {
+	custom_robot_state = Free
+}
+
+trans custom_robot_invariants_propagation {
+	custom_robot_state = Lock and
+	if custom_robot_goto_state = Running and not (custom_robot_motion = CustomRobot_On) then
+		|custom_robot_goto_state|(
+			custom_robot_goto_state' = InvariantFailure
+		)
+	elif custom_robot_recharge_state = Running and not (custom_robot_motion = CustomRobot_Off) then
+		|custom_robot_recharge_state|(
+			custom_robot_recharge_state' = InvariantFailure
+		)
+	else
+		|custom_robot_state, custom_robot_goto_state, custom_robot_recharge_state, sequence_0_custom_robot_goto_interface_state, sequence_0_custom_robot_goto_result, sequence_0_custom_robot_recharge_interface_state, sequence_0_custom_robot_recharge_result|(
+			if custom_robot_goto_state = InvariantFailure or custom_robot_goto_state = Success or custom_robot_goto_state = Failure or custom_robot_goto_state = Interrupted then
+				custom_robot_goto_state' = Idle
+				and if sequence_0_custom_robot_goto_interface_state = WaitResult then
+					sequence_0_custom_robot_goto_interface_state' = NoCall and
+					if custom_robot_goto_state = InvariantFailure then
+						sequence_0_custom_robot_goto_result' = InvaFailRes
+					elif custom_robot_goto_state = Success then
+						sequence_0_custom_robot_goto_result' = SuccessRes
+					elif custom_robot_goto_state = Failure then
+						sequence_0_custom_robot_goto_result' = FailureRes
+					elif custom_robot_goto_state = Interrupted then
+						sequence_0_custom_robot_goto_result' = InterruptionRes
+					else
+						sequence_0_custom_robot_goto_result' = NoneRes
+					end
+				else
+					sequence_0_custom_robot_goto_interface_state' = sequence_0_custom_robot_goto_interface_state and sequence_0_custom_robot_goto_result' = sequence_0_custom_robot_goto_result
+				end
+			else
+				custom_robot_goto_state' = custom_robot_goto_state
+				and sequence_0_custom_robot_goto_interface_state' = sequence_0_custom_robot_goto_interface_state and sequence_0_custom_robot_goto_result' = sequence_0_custom_robot_goto_result
+			end and
+			if custom_robot_recharge_state = InvariantFailure or custom_robot_recharge_state = Success or custom_robot_recharge_state = Failure or custom_robot_recharge_state = Interrupted then
+				custom_robot_recharge_state' = Idle
+				and if sequence_0_custom_robot_recharge_interface_state = WaitResult then
+					sequence_0_custom_robot_recharge_interface_state' = NoCall and
+					if custom_robot_recharge_state = InvariantFailure then
+						sequence_0_custom_robot_recharge_result' = InvaFailRes
+					elif custom_robot_recharge_state = Success then
+						sequence_0_custom_robot_recharge_result' = SuccessRes
+					elif custom_robot_recharge_state = Failure then
+						sequence_0_custom_robot_recharge_result' = FailureRes
+					elif custom_robot_recharge_state = Interrupted then
+						sequence_0_custom_robot_recharge_result' = InterruptionRes
+					else
+						sequence_0_custom_robot_recharge_result' = NoneRes
+					end
+				else
+					sequence_0_custom_robot_recharge_interface_state' = sequence_0_custom_robot_recharge_interface_state and sequence_0_custom_robot_recharge_result' = sequence_0_custom_robot_recharge_result
+				end
+			else
+				custom_robot_recharge_state' = custom_robot_recharge_state
+				and sequence_0_custom_robot_recharge_interface_state' = sequence_0_custom_robot_recharge_interface_state and sequence_0_custom_robot_recharge_result' = sequence_0_custom_robot_recharge_result
+			end and
+			custom_robot_state' = Free
+		)
+	end
+}
+
+// ==================== Skill ====================
+
+// -------------------- Skill goto --------------------
+
+var custom_robot_goto_state: SkillState
+
+init custom_robot_goto {
+	custom_robot_goto_state = Idle
+}
+trans sequence_0_custom_robot_goto_idle_to_idle_precond_false {
+	custom_robot_state = Free and custom_robot_goto_state = Idle
+	and not ( (custom_robot_motion = CustomRobot_Off) and seq_0_d > 0 and blevel >= en_cons )
+	and sequence_0_custom_robot_goto_interface_state = AsynCall
+	and |sequence_0_custom_robot_goto_interface_state, sequence_0_custom_robot_goto_result|(
+		sequence_0_custom_robot_goto_interface_state' = NoCall and sequence_0_custom_robot_goto_result' = StartFailureRes
+	)
+}
+trans sequence_0_custom_robot_goto_idle_to_running {
+	custom_robot_state = Free and custom_robot_goto_state = Idle
+	and (custom_robot_motion = CustomRobot_Off)
+	and seq_0_d > 0 and blevel >= en_cons
+	and sequence_0_custom_robot_goto_interface_state = AsynCall
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion, sequence_0_custom_robot_goto_interface_state, d|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Running
+		and custom_robot_motion' = CustomRobot_On
+		and sequence_0_custom_robot_goto_interface_state' = WaitResult
+		and d' = seq_0_d
+	)
+}
+trans sequence_0_custom_robot_goto_running_to_running_busy {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and sequence_0_custom_robot_goto_interface_state = AsynCall
+	and |sequence_0_custom_robot_goto_interface_state, sequence_0_custom_robot_goto_result|(
+		sequence_0_custom_robot_goto_interface_state' = NoCall and sequence_0_custom_robot_goto_result' = SkillBusyRes
+	)
+}
+trans custom_robot_goto_running_to_running {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and d > 0 and blevel >= en_cons
+	and |d, blevel|(
+		d' = d - 1
+		and blevel' = blevel - en_cons
+	)
+}
+trans custom_robot_goto_running_to_success_arrived {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and d <= 0
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Success
+		and custom_robot_motion' = CustomRobot_Off
+	)
+}
+trans custom_robot_goto_running_to_failure_blocked {
+	custom_robot_state = Free and custom_robot_goto_state = Running
+	and d > 0 and blevel < en_cons
+	and |custom_robot_state, custom_robot_goto_state, custom_robot_motion|(
+		custom_robot_state' = Lock and custom_robot_goto_state' = Failure
+		and custom_robot_motion' = CustomRobot_Off
+	)
+}
+
+//trans custom_robot_goto_running_to_interrupting {
+//	custom_robot_state = Free and custom_robot_goto_state = Running and false
+//	and |custom_robot_goto_state|(custom_robot_goto_state' = Interrupting)
+//}
+//trans custom_robot_goto_interrupting_to_interrupted {
+//	custom_robot_state = Free and custom_robot_goto_state = Interrupting
+//	and |custom_robot_state, custom_robot_goto_state|(
+//		custom_robot_state' = Lock and custom_robot_goto_state' = Interrupted
+//	)
+//}
+
+// -------------------- Skill recharge --------------------
+
+var custom_robot_recharge_state: SkillState
+
+init custom_robot_recharge {
+	custom_robot_recharge_state = Idle
+}
+
+// -------------------- Skill Interface --------------------
+
+var sequence_0_custom_robot_goto_interface_state: SkillInterfaceState
+var sequence_0_custom_robot_goto_result: SkillCallResults
+
+var sequence_0_custom_robot_recharge_interface_state: SkillInterfaceState
+var sequence_0_custom_robot_recharge_result: SkillCallResults
+
+init init_custom_robot_skill_interface {
+	sequence_0_custom_robot_goto_interface_state = NoCall
+	and sequence_0_custom_robot_goto_result = NoneRes and
+	sequence_0_custom_robot_recharge_interface_state = NoCall
+	and sequence_0_custom_robot_recharge_result = NoneRes
+}
+
+
+
+
+// ==================== Composite skills ====================
+
+// -------------------- Sequence 0 --------------------
+
+var sequence_0_state: Sequence0State
+var sequence_0_result: CompositeResults
+
+init init_sequence_0 {
+	sequence_0_state = IdleSeq0
+	and sequence_0_result = NoneCo
+}
+
+trans sequence_0_idle_to_starting {
+	sequence_0_state = IdleSeq0
+	and seq_0_start
+	and |sequence_0_state, sequence_0_result, seq_0_start|(
+		sequence_0_state' = Starting0
+		and sequence_0_result' = NoneCo
+		and seq_0_start' = false
+	)
+}
+
+trans sequence_0_starting_to_goto {
+	sequence_0_state = Starting0
+	and sequence_0_custom_robot_goto_interface_state = NoCall
+	and |sequence_0_state, sequence_0_custom_robot_goto_interface_state, seq_0_d, sequence_0_custom_robot_goto_result|(
+		sequence_0_state' = Goto0
+		and sequence_0_custom_robot_goto_interface_state' = AsynCall
+		and seq_0_d' = seq_0_d_1
+		and sequence_0_custom_robot_goto_result' = NoneRes
+	)
+}
+
+trans sequence_0_goto_to_idle_result_fail {
+	sequence_0_state = Goto0
+	and sequence_0_custom_robot_goto_result != NoneRes and sequence_0_custom_robot_goto_result != SuccessRes
+	and |sequence_0_state, sequence_0_result|(
+		sequence_0_state' = IdleSeq0
+		and sequence_0_result' = FailureCo
+	)
+}
+trans sequence_0_goto_to_idle {
+	sequence_0_state = Goto0
+	and sequence_0_custom_robot_goto_result = SuccessRes
+	and |sequence_0_state, sequence_0_result|(
+		sequence_0_state' = IdleSeq0
+		and sequence_0_result' = SuccessCo
+	)
+}
+
+
+init init_custom_robot_data {
+  fully_charged = 10 and blevel = 10 and en_cons = 2 and d = 0 and seq_0_d = 0
+  and seq_0_start = true
+
+// sequence 0 parameters
+//   and seq_0_d_1 = 1
+//   and seq_0_d_1 = 5
+//   and seq_0_d_1 = 0
+//   and seq_0_d_1 = 6
+//   and seq_0_d_1 = 51
+}
+
+
+// test séquence 0, finite
+// seq_0_d_1 = 1 : SAT
+// seq_0_d_1 = 5 : SAT
+// seq_0_d_1 = 0 : UNSAT
+// seq_0_d_1 = 6 : UNSAT
+
+
+prop = F (sequence_0_result = SuccessCo)
+//prop = true
+
+
+
+
+
+search finite + complete solve
+
+
