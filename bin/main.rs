@@ -11,8 +11,14 @@ struct Args {
     #[arg(short, long)]
     file: String,
     /// transition labeling
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = false)]
     label: bool,
+    /// event transition presence
+    #[arg(short, long, default_value_t = false)]
+    event: bool,
+    /// interruption transition presence
+    #[arg(short, long, default_value_t = false)]
+    interrupt: bool,
     /// composite skill name file
     #[arg(short, long, default_value_t = String::new())]
     composite: String,
@@ -36,7 +42,7 @@ fn main() {
             println!("{}", skillset);
         }
 
-        let tatam = to_tatam(&skillset, &lines_from_file(&args.composite), args.label);
+        let tatam = to_tatam(&skillset, &lines_from_file(&args.composite), args.label, args.event, args.interrupt);
         println!("{}", tatam);
     }
 }

@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn skill_to_tatam(skillset: &Skillset, skill: &Skill, composite_skill_names: &Vec<String>, label: bool) -> ModelTransNames {
+pub fn skill_to_tatam(skillset: &Skillset, skill: &Skill, composite_skill_names: &Vec<String>, label: bool, interrupt: bool) -> ModelTransNames {
     let mut out = String::new();
     let mut trans_names : Vec<String> = vec![];
 
@@ -28,22 +28,27 @@ pub fn skill_to_tatam(skillset: &Skillset, skill: &Skill, composite_skill_names:
             out += &skill_running_to_running_busy(skillset, skill, compo_name);
         }
     }
+
     for success in skill.successes() {
         let result = skill_running_to_success(skillset, skill, success, label);
         out += &result.model;
         trans_names.extend(result.transition_names);
     }
+
     for failure in skill.failures() {
         let result = skill_running_to_failure(skillset, skill, failure, label);
         out += &result.model;
         trans_names.extend(result.transition_names);
     }
-    let result = skill_running_to_interrupting(skillset, skill, label);
-    out += &result.model;
-    trans_names.extend(result.transition_names);
-    let result = skill_interrupting_to_interrupted(skillset, skill, label);
-    out += &result.model;
-    trans_names.extend(result.transition_names);
+
+    if interrupt {
+        let result = skill_running_to_interrupting(skillset, skill, label);
+        out += &result.model;
+        trans_names.extend(result.transition_names);
+        let result = skill_interrupting_to_interrupted(skillset, skill, label);
+        out += &result.model;
+        trans_names.extend(result.transition_names);
+    }
 
     ModelTransNames {
         model: out,
@@ -360,7 +365,7 @@ fn skill_running_to_interrupting(skillset: &Skillset, skill: &Skill, label: bool
     );
     trans_names.push(format!( "{}_{}_running_to_interrupting", skillset.name(), skill.name()));
     out += &format!(
-        "\t{} = Free and {} = Running and false\n",// remove 'and false'
+        "\t{} = Free and {} = Running\n",
         skillset_var(skillset),
         skill_var(skillset, skill)
     );

@@ -35,10 +35,10 @@ pub struct ModelTransNames {
 
 
 
-pub fn to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>, label: bool) -> String {
+pub fn to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>, label: bool, event: bool, interrupt: bool) -> String {
     let mut out = String::new();
 
-    out += &skillset_to_tatam(skillset, composite_skill_names, label);
+    out += &skillset_to_tatam(skillset, composite_skill_names, label, event, interrupt);
 
     out += "\nprop = true\n";
     out += "\nsearch infinite + complete solve\n";

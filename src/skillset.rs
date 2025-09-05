@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn skillset_to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>, label: bool) -> String {
+pub fn skillset_to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String>, label: bool, event: bool, interrupt: bool) -> String {
     let mut out = String::new();
     let mut trans_names = vec![];
 
@@ -13,7 +13,9 @@ pub fn skillset_to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String
     }
 
     out += &resources_to_tatam(skillset);
-    // out += &events_to_tatam(skillset);
+    if event {
+        out += &events_to_tatam(skillset);
+    }
 
     out += "// ==================== Skillset ====================\n";
     out += &format!("var {}: SkillsetState\n", skillset_var(skillset));
@@ -30,7 +32,7 @@ pub fn skillset_to_tatam(skillset: &Skillset, composite_skill_names: &Vec<String
     out += "\n// ==================== Skill ====================\n";
 
     for skill in skillset.skills().iter() {
-        let result = skill_to_tatam(skillset, skill, composite_skill_names, label);
+        let result = skill_to_tatam(skillset, skill, composite_skill_names, label, interrupt);
         out += &result.model;
         trans_names.extend(result.transition_names);
     }
